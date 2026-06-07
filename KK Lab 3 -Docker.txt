@@ -1,0 +1,252 @@
+////////////////////Docker Lab 3 ////////////////
+
+How many images are available on this host?
+
+>docker images 
+
+root@docker-host ~ ➜  docker images
+                                                                                               i Info →   U  In Use
+IMAGE                                  ID             DISK USAGE   CONTENT SIZE   EXTRA
+alpine:latest                          5b10f432ef3d       13.1MB         3.95MB        
+kodekloud/latest-webapp-mysql:latest   d5efbb3fe621        104MB         25.6MB        
+kodekloud/simple-webapp:latest         e5355b4c7804        131MB         31.8MB        
+mysql:latest                           c11782aa2a96        1.3GB          290MB        
+nginx:alpine                           feb6f75a08aa       93.9MB           27MB        
+nginx:latest                           06aa3d7be10b        240MB         65.9MB        
+postgres:latest                        270cac6290e2        650MB          168MB        
+redis:latest                           0c341492924c        204MB         55.3MB        
+ubuntu:latest                          f3d28607ddd7        160MB         45.3MB    
+
+
+What is the size of the ubuntu image?
+
+45.3MB (45MB) - content size
+
+We just pulled a new image. What is the tag on the newly pulled NGINX image?
+
+>docker images
+nginx:1.30-alpine                      5f979dcfed4c       93.6MB         26.9MB   
+
+
+
+We just downloaded the code of an application. What is the base image used in the Dockerfile?
+
+Inspect the Dockerfile in the webapp-color directory.
+
+>vim Dockerfile
+
+FROM python:3.14
+
+RUN pip install flask
+
+COPY . /opt/
+
+EXPOSE 8080
+
+WORKDIR /opt
+
+ENTRYPOINT ["python", "app.py"]
+
+Answer is: python:3.14
+
+
+
+To what location within the container is the application code copied to during a Docker build?
+
+Inspect the Dockerfile in the webapp-color directory.
+
+Answer is: /opt 
+
+
+Based on the given Dockerfile, which instruction defines the command that starts the application when a container is started?
+
+Inspect the Dockerfile in the webapp-color directory.
+
+Answer is: python app.py 
+
+
+What port is the web application run within the container?
+
+Inspect the Dockerfile in the webapp-color directory.
+
+Answer is: 8080
+
+Build a docker image using the Dockerfile and name it webapp-color. Do not specify a tag.
+
+>docker build -t webapp-color .
+
+let's see see all images now:
+
+root@docker-host ~/webapp-color via 🐍 ✖ docker images
+                                                                                               i Info →   U  In Use
+IMAGE                                  ID             DISK USAGE   CONTENT SIZE   EXTRA
+alpine:latest                          5b10f432ef3d       13.1MB         3.95MB        
+kodekloud/latest-webapp-mysql:latest   d5efbb3fe621        104MB         25.6MB        
+kodekloud/simple-webapp:latest         e5355b4c7804        131MB         31.8MB        
+mysql:latest                           c11782aa2a96        1.3GB          290MB        
+nginx:1.30-alpine                      5f979dcfed4c       93.6MB         26.9MB        
+nginx:alpine                           feb6f75a08aa       93.9MB           27MB        
+nginx:latest                           06aa3d7be10b        240MB         65.9MB        
+postgres:latest                        270cac6290e2        650MB          168MB        
+redis:latest                           0c341492924c        204MB         55.3MB        
+ubuntu:latest                          f3d28607ddd7        160MB         45.3MB        
+webapp-color:latest                    506ee3225e74       1.64GB          421MB
+
+
+Run an instance of the image webapp-color and publish port 8080 on the container to 8282 on the host.
+
+>docker run -d --name webapp-color-app -p 8282:8080 webapp-color:latest
+
+root@docker-host ~/webapp-color via 🐍 ➜  docker ps
+CONTAINER ID   IMAGE                 COMMAND           CREATED         STATUS         PORTS                                         NAMES
+18c15e7ccfc0   webapp-color:latest   "python app.py"   6 seconds ago   Up 5 seconds   0.0.0.0:8282->8080/tcp, [::]:8282->8080/tcp   webapp-color-app
+
+Validations search the name to be webapp-color and not webapp-color-app ,so need to rename:
+
+>docker rename webapp-color-app webapp-color
+
+root@docker-host ~/webapp-color via 🐍 ➜  docker rename webapp-color-app webapp-color
+
+root@docker-host ~/webapp-color via 🐍 ➜  docker ps
+CONTAINER ID   IMAGE                 COMMAND           CREATED         STATUS         PORTS                                         NAMES
+18c15e7ccfc0   webapp-color:latest   "python app.py"   3 minutes ago   Up 3 minutes   0.0.0.0:8282->8080/tcp, [::]:8282->8080/tcp   webapp-color
+
+
+
+Access the application by clicking the HOST:8282 tab above your terminal.
+
+When you are done, you can stop the running container by pressing CTRL + C.
+
+>just click on the right up corner of the window - there a TAB
+
+
+
+What is the base Operating System used by the python:3.14 image?
+
+If required, run an instance of the image to figure it out.
+
+Pull the image , cause it was not part of docker images
+
+root@docker-host ~/webapp-color via 🐍 ➜  docker pull python:3.14
+3.14: Pulling from library/python
+Digest: sha256:250e5c97be05e1eb2272fbdbd810dfd638f9012e1e6f65c99390ad3239943a08
+Status: Downloaded newer image for python:3.14
+docker.io/library/python:3.14
+
+Layers inspectations can help to find the base of that image:
+
+root@docker-host ~/webapp-color via 🐍 ✖ docker history python:3.14
+IMAGE          CREATED       CREATED BY                                      SIZE      COMMENT
+250e5c97be05   2 weeks ago   CMD ["python3"]                                 0B        buildkit.dockerfile.v0
+<missing>      2 weeks ago   RUN /bin/sh -c set -eux;  for src in idle3 p…   24.6kB    buildkit.dockerfile.v0
+<missing>      2 weeks ago   RUN /bin/sh -c set -eux;   savedAptMark="$(a…   82.7MB    buildkit.dockerfile.v0
+<missing>      2 weeks ago   ENV PYTHON_SHA256=7e32597b99e5d9a39abed35de4…   0B        buildkit.dockerfile.v0
+<missing>      2 weeks ago   ENV PYTHON_VERSION=3.14.5                       0B        buildkit.dockerfile.v0
+<missing>      2 weeks ago   RUN /bin/sh -c set -eux;  apt-get update;  a…   20MB      buildkit.dockerfile.v0
+<missing>      2 weeks ago   ENV PATH=/usr/local/bin:/usr/local/sbin:/usr…   0B        buildkit.dockerfile.v0
+<missing>      2 weeks ago   RUN /bin/sh -c set -ex;  apt-get update;  ap…   694MB     buildkit.dockerfile.v0
+<missing>      2 weeks ago   RUN /bin/sh -c set -eux;  apt-get update;  a…   202MB     buildkit.dockerfile.v0
+<missing>      2 weeks ago   RUN /bin/sh -c set -eux;  apt-get update;  a…   65.3MB    buildkit.dockerfile.v0
+<missing>      2 weeks ago   # debian.sh --arch 'amd64' out/ 'trixie' '@1…   134MB     debuerreotype 0.17
+
+
+What is the approximate size of the webapp-color image?
+
+
+root@docker-host ~/webapp-color via 🐍 ✖ docker images
+                                                                                               i Info →   U  In Use
+IMAGE                                  ID             DISK USAGE   CONTENT SIZE   EXTRA
+alpine:latest                          5b10f432ef3d       13.1MB         3.95MB        
+kodekloud/latest-webapp-mysql:latest   d5efbb3fe621        104MB         25.6MB        
+kodekloud/simple-webapp:latest         e5355b4c7804        131MB         31.8MB        
+mysql:latest                           c11782aa2a96        1.3GB          290MB        
+nginx:1.30-alpine                      5f979dcfed4c       93.6MB         26.9MB        
+nginx:alpine                           feb6f75a08aa       93.9MB           27MB        
+nginx:latest                           06aa3d7be10b        240MB         65.9MB        
+postgres:latest                        270cac6290e2        650MB          168MB        
+python:3.14                            250e5c97be05       1.63GB          432MB        
+redis:latest                           0c341492924c        204MB         55.3MB        
+ubuntu:latest                          f3d28607ddd7        160MB         45.3MB        
+webapp-color:latest                    506ee3225e74       1.64GB          421MB    U
+
+Answer is :421MB
+
+That's really BIG for a Docker Image!
+
+Docker images are supposed to be small and light weight. Let us try to trim it down.
+
+Build a new smaller docker image by modifying the same Dockerfile and name it webapp-color and tag it lite.
+
+
+Hint: Find a smaller base image for python:3.14. Make sure the final image is less than 150MB.
+
+
+So : python:3.14-alpine is about 50-60mb and python:3.14-slim 120–150 MB
+
+Modify Dockerfile to have:
+
+FROM python:3.14-alpine
+
+RUN pip install flask
+
+COPY . /opt/
+
+EXPOSE 8080
+
+WORKDIR /opt
+
+ENTRYPOINT ["python", "app.py"]
+
+Build new "lite" docker image from this Dokcerfile:
+
+>docker build -t lite .
+
+
+root@docker-host ~/webapp-color via 🐍 ➜  docker build -t lite .
+[+] Building 4.6s (9/9) FINISHED                                                                    docker:default
+ => [internal] load build definition from Dockerfile                                                          0.0s
+ => => transferring dockerfile: 158B                                                                          0.0s
+ => [internal] load metadata for docker.io/library/python:3.14-alpine                                         0.4s
+ => [internal] load .dockerignore                                                                             0.0s
+ => => transferring context: 2B                                                                               0.0s
+ => [1/4] FROM docker.io/library/python:3.14-alpine@sha256:5a824eb82cc75361f98611f3cfc5091ea33f10a6ccea4d4eb  0.0s
+ => => resolve docker.io/library/python:3.14-alpine@sha256:5a824eb82cc75361f98611f3cfc5091ea33f10a6ccea4d4eb  0.0s
+ => [internal] load build context                                                                             0.0s
+ => => transferring context: 321B                                                                             0.0s
+ => [2/4] RUN pip install flask                                                                               3.3s
+ => [3/4] COPY . /opt/                                                                                        0.0s
+ => [4/4] WORKDIR /opt                                                                                        0.0s 
+ => exporting to image                                                                                        0.8s 
+ => => exporting layers                                                                                       0.5s 
+ => => exporting manifest sha256:18a751a4bb2216a448e8f8bfd5f9a1927b016a8017f631a48183dfb97bcb1f0d             0.0s 
+ => => exporting config sha256:f917d4a7f22b8f933f11131e4af5576f228e0e4a1548ac13e4fb05d3e1f3de92               0.0s 
+ => => exporting attestation manifest sha256:12590357bd1a70e2c4f57d483f8b80f0230f5b306a8f77340432c96ae849d9e  0.0s
+ => => exporting manifest list sha256:07fff9f496e473bf9a772d0476262aae9fe6e017303d7f3cd6616074ca153e77        0.0s
+ => => naming to docker.io/library/lite:latest                                                                0.0s
+ => => unpacking to docker.io/library/lite:latest                                                             0.3s
+
+I have misssed they ask to name and TAG the image:
+Need to run webapp-color - will be a name and TAG will be "lite"
+>docker build -t webapp-color:lite .
+
+Check the lite image size :
+>docker images
+webapp-color:lite                      2bc4de00e2af       97.6MB           24MB 
+
+Look at the difference!
+
+We reduced our image size from 420MB to 23.9MB by using the alpine version of the same image!
+
+
+Run an instance of the new image webapp-color:lite and publish port 8080 on the container to 8383 on the host.
+
+
+
+>root@docker-host ~/webapp-color via 🐍 ➜  docker run -d --name webapp-color2 -p 8383:8080 webapp-color:lite
+eaa5df092a8992c15a1f7f1f9d740f689c0e164018f469ed3e6be79e0a2455f3
+
+Validation:
+
+root@docker-host ~/webapp-color via 🐍 ✖ docker ps
+CONTAINER ID   IMAGE                 COMMAND           CREATED          STATUS          PORTS                                         NAMES
+eaa5df092a89   webapp-color:lite     "python app.py"   30 seconds ago   Up 29 seconds   0.0.0.0:8383->8080/tcp, [::]:8383->8080/tcp   webapp-color2

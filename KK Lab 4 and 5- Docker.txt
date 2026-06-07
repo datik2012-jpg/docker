@@ -1,0 +1,149 @@
+////////////////////////Docker Lab 4 //////////////////
+
+Dockerfiles for a few commonly used Docker Images are given in the /root (current) directory. Inspect them and try to answer the questions in the subsequent tasks.
+
+
+What is the ENTRYPOINT configured on the mysql image Dockerfile?
+
+open a file and see there in the bottom: ENTRYPOINT ["docker-entrypoint.sh"]
+
+What is the CMD configured on the wordpress image?
+
+Find in the docker file wordpress and see there : CMD ["apache2-foreground"]
+
+
+What is the final command run at startup when the wordpress image is run?
+
+Consider both ENTRYPOINT and CMD instructions.
+
+Answer: docker-entrypoint.sh apache2-foreground
+
+
+Which command runs at startup when the ubuntu image starts?
+
+Answer: CMD ["bash"]
+
+
+Run an instance of the ubuntu image that executes the sleep 1000 command at startup.
+
+
+Note: Run it in detached mode.
+
+
+
+root@docker-host ~ ➜  docker images
+                                                                                               i Info →   U  In Use
+IMAGE                                  ID             DISK USAGE   CONTENT SIZE   EXTRA
+alpine:latest                          5b10f432ef3d       13.1MB         3.95MB        
+kodekloud/latest-webapp-mysql:latest   d5efbb3fe621        104MB         25.6MB        
+kodekloud/simple-webapp:latest         e5355b4c7804        131MB         31.8MB        
+mysql:latest                           c11782aa2a96        1.3GB          290MB        
+nginx:alpine                           feb6f75a08aa       93.9MB           27MB        
+nginx:latest                           06aa3d7be10b        240MB         65.9MB        
+postgres:latest                        270cac6290e2        650MB          168MB        
+redis:latest                           0c341492924c        204MB         55.3MB        
+ubuntu:latest                          f3d28607ddd7        160MB         45.3MB        
+
+root@docker-host ~ ➜  docker run ubuntu sleep 1000
+
+
+
+
+////////////////////////Docker Lab 5 ///////////
+
+Inspect the environment variables set on the running container and identify the value set to the APP_COLOR variable.
+
+check running containers:
+
+root@docker-host ~ ➜  docker ps
+CONTAINER ID   IMAGE                     COMMAND           CREATED              STATUS              PORTS      NAMES
+753ebc3b57ca   kodekloud/simple-webapp   "python app.py"   About a minute ago   Up About a minute   8080/tcp   trusting_grothendieck
+
+
+Inspect the container:
+
+root@docker-host ~ ✖ docker inspect 753ebc
+
+            "Env": [
+                "APP_COLOR=pink",
+                "PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "LANG=C.UTF-8",
+                "GPG_KEY=0D96DF4D4110E5C43FBFB17F2D347EA6AA65421D",
+                "PYTHON_VERSION=3.6.6",
+                "PYTHON_PIP_VERSION=18.1"
+
+
+Answer is : pink 
+
+
+
+Run a container named blue-app using image kodekloud/simple-webapp and set the environment variable APP_COLOR to blue. Make the application available on port 38282 on the host. The application listens on port 8080.
+
+>docker run -d --name blue-app -p 38282:8080 -e APP_COLOR=blue kodekloud/simple-webapp
+
+
+root@docker-host ~ ✖ docker run -d --name blue-app -p 38282:8080 -e APP_COLOR=blue kodekloud/simple-webapp
+c13d7034ca89505d330bf943313e28947d7421b2f9ebfde7cd0f8aa72febc017
+
+root@docker-host ~ ➜  docker ps
+CONTAINER ID   IMAGE                     COMMAND           CREATED         STATUS         PORTS                                           NAMES
+c13d7034ca89   kodekloud/simple-webapp   "python app.py"   6 seconds ago   Up 5 seconds   0.0.0.0:38282->8080/tcp, [::]:38282->8080/tcp   blue-app
+753ebc3b57ca   kodekloud/simple-webapp   "python app.py"   6 minutes ago   Up 6 minutes   8080/tcp                                        trusting_grothendieck
+
+root@docker-host ~ ✖ docker inspect c13d70
+
+            "Env": [
+                "APP_COLOR=blue",
+                "PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "LANG=C.UTF-8",
+                "GPG_KEY=0D96DF4D4110E5C43FBFB17F2D347EA6AA65421D",
+                "PYTHON_VERSION=3.6.6",
+                "PYTHON_PIP_VERSION=18.1"
+            ],
+
+
+View the application by clicking the HOST:38282 link in the top-right corner of your terminal bar and ensure it displays the right color.
+
+
+
+
+Deploy a mysql database using the mysql image and name it mysql-db.
+
+Set the database password to db_pass123.
+
+
+Look up the mysql image on Docker Hub and identify the correct environment variable for setting the root password.
+
+
+a - check docker images names:
+
+root@docker-host ~ ✖ docker images
+                                                                                               i Info →   U  In Use
+IMAGE                                  ID             DISK USAGE   CONTENT SIZE   EXTRA
+alpine:latest                          5b10f432ef3d       13.1MB         3.95MB        
+kodekloud/latest-webapp-mysql:latest   d5efbb3fe621        104MB         25.6MB        
+kodekloud/simple-webapp:latest         e5355b4c7804        131MB         31.8MB    U   
+mysql:latest                           c11782aa2a96        1.3GB          290MB        
+nginx:alpine                           feb6f75a08aa       93.9MB           27MB        
+nginx:latest                           06aa3d7be10b        240MB         65.9MB        
+postgres:latest                        270cac6290e2        650MB          168MB        
+redis:latest                           0c341492924c        204MB         55.3MB        
+ubuntu:latest                          f3d28607ddd7        160MB         45.3MB  
+
+b- inspect docker image variables:docker inspect mysql:latest   - will show as THAT fact password is not existing in the image for security purpose
+
+as well the same option to check if exist or not: 
+docker inspect mysql:latest --format '{{json .Config.Env}}'
+
+mysql:latest
+
+
+Run and pass the passsword in the run time:
+
+root@docker-host ~ ✖ docker run -d --name mysql-db -p 38283:8080 -e MYSQL_ROOT_PASSWORD=my-secret-pw mysql:latest
+72675cef181c3b21589cafd7359894a08e88e688cd5dbd43f6c403ce37121d97
+
+or
+
+root@docker-host ~ ✖ docker run -d --name mysql-db2 -p 38285:8080 -e MYSQL_ROOT_PASSWORD=db_pass123 mysql:latest
+35909b3518cbe87006cc353b23428e87cb75895f5c212d6a0c0c65988c73d57b

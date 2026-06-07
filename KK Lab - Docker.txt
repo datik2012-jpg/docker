@@ -1,0 +1,197 @@
+//////////////////Docker/////////////////
+
+docker --help
+
+
+check docker version:
+
+root@docker-host ~ ✖ docker version
+Client: Docker Engine - Community
+ Version:           29.4.3
+ API version:       1.54
+ Go version:        go1.26.2
+ Git commit:        055a478
+ Built:             Wed May  6 17:07:36 2026
+ OS/Arch:           linux/amd64
+ Context:           default
+
+Server: Docker Engine - Community
+ Engine:
+  Version:          29.4.3
+  API version:      1.54 (minimum version 1.40)
+  Go version:       go1.26.2
+  Git commit:       56be731
+  Built:            Wed May  6 17:07:36 2026
+  OS/Arch:          linux/amd64
+  Experimental:     false
+ containerd:
+  Version:          v2.2.3
+  GitCommit:        77c84241c7cbdd9b4eca2591793e3d4f4317c590
+ runc:
+  Version:          1.3.5
+  GitCommit:        v1.3.5-0-g488fc13e
+ docker-init:
+  Version:          0.19.0
+  GitCommit:        de40ad0
+
+How many containers are running on this host?
+>docker ps  OR stopped containers :docker ps -a
+
+How many images are available on this host?
+
+root@docker-host ~ ➜  docker images
+                                                                         i Info →   U  In Use
+IMAGE                                  ID             DISK USAGE   CONTENT SIZE   EXTRA
+alpine:latest                          5b10f432ef3d       13.1MB         3.95MB        
+kodekloud/latest-webapp-mysql:latest   d5efbb3fe621        104MB         25.6MB        
+kodekloud/simple-webapp:latest         e5355b4c7804        131MB         31.8MB        
+mysql:latest                           c11782aa2a96        1.3GB          290MB        
+nginx:alpine                           feb6f75a08aa       93.9MB           27MB        
+nginx:latest                           06aa3d7be10b        240MB         65.9MB        
+postgres:latest                        270cac6290e2        650MB          168MB        
+redis:latest                           0c341492924c        204MB         55.3MB        
+ubuntu:latest                          f3d28607ddd7        160MB         45.3MB 
+
+
+
+
+Run a container using the redis image
+
+
+NOTE: Run the container in detached mode if you don't want the container to take over your current terminal. This allows your terminal to remain free for other commands, or you can open a new terminal to run the command.
+
+root@docker-host ~ ✖ docker run -d redis
+83aa0804d0fc5d8a91f9b8a6ccf6787f2b2ad68539206f192ef6ae62b0dfc7de
+
+root@docker-host ~ ➜  docker ps
+CONTAINER ID   IMAGE     COMMAND                  CREATED         STATUS         PORTS      NAMES
+83aa0804d0fc   redis     "docker-entrypoint.s…"   5 seconds ago   Up 4 seconds   6379/tcp   clever_bartik
+
+
+
+Stop the container you just created!
+
+root@docker-host ~ ✖ docker stop 83aa0804d0fc
+83aa0804d0fc
+
+root@docker-host ~ ➜  docker ps
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+
+root@docker-host ~ ➜  docker ps -a
+CONTAINER ID   IMAGE     COMMAND                  CREATED              STATUS                     PORTS     NAMES
+83aa0804d0fc   redis     "docker-entrypoint.s…"   About a minute ago   Exited (0) 7 seconds ago             clever_bartik
+
+
+
+Find runnign and stopped containers in the host:
+
+root@docker-host ~ ➜  docker ps -a
+CONTAINER ID   IMAGE          COMMAND                  CREATED          STATUS                          PORTS     NAMES
+3ef1c6c0c255   alpine         "/bin/sh"                52 seconds ago   Exited (0) 51 seconds ago                 youthful_diffie
+2f5a5853c225   alpine         "sleep 1000"             52 seconds ago   Up 52 seconds                             infallible_albattani
+8127db96050c   nginx:alpine   "/docker-entrypoint.…"   53 seconds ago   Up 52 seconds                   80/tcp    nginx-2
+6bd4dc08b499   nginx:alpine   "/docker-entrypoint.…"   53 seconds ago   Up 53 seconds                   80/tcp    nginx-1
+baa034455777   ubuntu         "sleep 1000"             54 seconds ago   Up 53 seconds                             awesome_northcut
+83aa0804d0fc   redis          "docker-entrypoint.s…"   2 minutes ago    Exited (0) About a minute ago             clever_bartik
+
+
+
+Delete all containers from the Docker Host (both running and not running ones).
+
+
+Remember you may have to stop containers before deleting them.
+
+>docker rm 2f5a5853c225 8127db96050c 6bd4dc08b499 baa034455777 83aa0804d0fc
+
+Valiudation:
+root@docker-host ~ ➜  docker ps -a
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+
+
+
+Delete the ubuntu image.
+
+root@docker-host ~ ➜  docker images
+                                                                         i Info →   U  In Use
+IMAGE                                  ID             DISK USAGE   CONTENT SIZE   EXTRA
+alpine:latest                          5b10f432ef3d       13.1MB         3.95MB        
+kodekloud/latest-webapp-mysql:latest   d5efbb3fe621        104MB         25.6MB        
+kodekloud/simple-webapp:latest         e5355b4c7804        131MB         31.8MB        
+mysql:latest                           c11782aa2a96        1.3GB          290MB        
+nginx:alpine                           feb6f75a08aa       93.9MB           27MB        
+nginx:latest                           06aa3d7be10b        240MB         65.9MB        
+postgres:latest                        270cac6290e2        650MB          168MB        
+redis:latest                           0c341492924c        204MB         55.3MB        
+ubuntu:latest                          f3d28607ddd7        160MB         45.3MB
+
+
+root@docker-host ~ ✖ docker rmi ubuntu:latest 
+Untagged: ubuntu:latest
+Deleted: sha256:f3d28607ddd78734bb7f71f117f3c6706c666b8b76cbff7c9ff6e5718d46ff64
+
+
+You are required to pull a docker image, which will be used to run a container later. Pull the image nginx:1.28-alpine.
+
+
+Only pull the image, do not create a container.
+
+root@docker-host ~ ✖ docker pull nginx:1.28-alpine
+1.28-alpine: Pulling from library/nginx
+1d9cbdb003be: Pull complete 
+589002ba0eae: Pull complete 
+0151c82f84a9: Pull complete 
+e914c6e98e37: Pull complete 
+d631a49fb4f7: Pull complete 
+8f7c784e2471: Pull complete 
+44fa0a5a779f: Pull complete 
+98104829f3fe: Pull complete 
+f2baa5b25d86: Download complete 
+8654f8d1249e: Download complete 
+Digest: sha256:a8b39bd9cf0f83869a2162827a0caf6137ddf759d50a171451b335cecc87d236
+Status: Downloaded newer image for nginx:1.28-alpine
+docker.io/library/nginx:1.28-alpine
+
+Run a container using the image name nginx:1.28-alpine (not the image ID) and name it webapp.
+
+Use doecker help to see the options: 
+
+root@docker-host ~ ➜  docker run
+docker: 'docker run' requires at least 1 argument
+
+Usage:  docker run [OPTIONS] IMAGE [COMMAND] [ARG...]
+
+See 'docker run --help' for more information
+
+root@docker-host ~ ✖ docker run --help
+Usage:  docker run [OPTIONS] IMAGE [COMMAND] [ARG...]
+
+Create and run a new container from an image
+
+
+root@docker-host ~ ✖ docker run -d --name webapp nginx:1.28-alpine
+86a2d10b917cbf97469b18d14aeff0a7c3f74a63f500a54636ba148dc8e064d0
+
+root@docker-host ~ ➜  docker ps
+CONTAINER ID   IMAGE               COMMAND                  CREATED         STATUS         PORTS     NAMES
+86a2d10b917c   nginx:1.28-alpine   "/docker-entrypoint.…"   3 seconds ago   Up 2 seconds   80/tcp    webapp
+
+
+Cleanup: Delete all images on the host.
+
+
+Remove containers as necessary.
+
+
+
+IMAGE                                  ID             DISK USAGE   CONTENT SIZE   EXTRA
+alpine:latest                          5b10f432ef3d       13.1MB         3.95MB        
+kodekloud/latest-webapp-mysql:latest   d5efbb3fe621        104MB         25.6MB        
+kodekloud/simple-webapp:latest         e5355b4c7804        131MB         31.8MB        
+mysql:latest                           c11782aa2a96        1.3GB          290MB        
+nginx:1.28-alpine                      a8b39bd9cf0f       93.4MB         26.9MB        
+nginx:alpine                           feb6f75a08aa       93.9MB           27MB        
+nginx:latest                           06aa3d7be10b        240MB         65.9MB        
+postgres:latest                        270cac6290e2        650MB          168MB        
+redis:latest                           0c341492924c        204MB         55.3MB  
+
+>docker rmi alpine:latest kodekloud/latest-webapp-mysql:latest kodekloud/simple-webapp:latest mysql:latest nginx:1.28-alpine nginx:1.28-alpine nginx:alpine nginx:latest postgres:latest redis:latest  

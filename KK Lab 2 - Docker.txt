@@ -1,0 +1,55 @@
+/////////////////////Docker Lab 2 - //////////////////
+
+Let us first inspect the environment. How many containers are running on this host?
+
+root@docker-host ~ ➜  docker ps
+CONTAINER ID   IMAGE          COMMAND                  CREATED          STATUS          PORTS                                                                                    NAMES
+76ca4c3bc4af   nginx:alpine   "/docker-entrypoint.…"   12 minutes ago   Up 12 minutes   0.0.0.0:3456->3456/tcp, [::]:3456->3456/tcp, 0.0.0.0:38080->80/tcp, [::]:38080->80/tcp   adoring_faraday
+
+What is the image used by the container?
+
+Answer: nginx:alpine
+
+How many unique ports are published on this container (count each port only once even if it appears for IPv4 and IPv6)?
+
+0.0.0.0:3456->3456/tcp, [::]:3456->3456/tcp, 0.0.0.0:38080->80/tcp, [::]:38080->80/tcp
+
+So : 2 ports
+
+
+
+Which of the following ports are mapped on the container side (i.e., exposed inside the container)?
+
+Answer: 3456 and 80 
+
+Which of the below ports are published on Host?
+
+Answer: 3456 and 38080
+
+Run an instance of kodekloud/simple-webapp:blue and name the container blue-app, mapping port 8080 on the container to port 38282 on the host
+
+Example: docker run -d -p HOST_PORT:CONTAINER_PORT nginx
+
+a) pull docker image: kodekloud/simple-webapp:blue
+root@docker-host ~ ✖ docker pull kodekloud/simple-webapp:blue
+blue: Pulling from kodekloud/simple-webapp
+095a1a007cdb: Pull complete 
+f43c8e496f88: Pull complete 
+a6fc8a0deb7d: Pull complete 
+58ca939f7651: Pull complete 
+Digest: sha256:9caf15476dc60b77c7460791bea8ea5f6ca02b90199aabe088beea83bc943fe5
+Status: Downloaded newer image for kodekloud/simple-webapp:blue
+docker.io/kodekloud/simple-webapp:blue
+
+
+> docker run -d --name blue-app -p 38282:8080 kodekloud/simple-webapp:blue
+
+
+RUN:
+
+root@docker-host ~ ➜  docker run -d --name blue-app -p 38282:8080 kodekloud/simple-webapp:blue
+4656ace7e10102739b2dfa04babce37320155f11a2c9aebb607136a382bbd284
+
+root@docker-host ~ ➜  docker ps
+CONTAINER ID   IMAGE                          COMMAND           CREATED         STATUS         PORTS                                           NAMES
+4656ace7e101   kodekloud/simple-webapp:blue   "python app.py"   4 seconds ago   Up 3 seconds   0.0.0.0:38282->8080/tcp, [::]:38282->8080/tcp   blue-app
