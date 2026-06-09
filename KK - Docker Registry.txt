@@ -1,0 +1,465 @@
+/////////////////Docker Registry ////////////////
+
+
+Run your own local Docker registry
+
+Local Host:
+
+Image name → my-image
+
+Description → your built image
+
+Registry:
+
+Image → registry:2
+
+Port → 5000
+
+docker run -d -p 5000:5000 --name registry registry:2
+docker image tag my-image localhost:5000/my-image
+
+
+Explanation
+The first command starts a local Docker registry container named registry on port 5000.
+
+The second command tags your image so it can be pushed to that registry (localhost:5000/my-image).
+
+After this, you can push your image with:
+
+docker push localhost:5000/my-image
+
+
+docker push localhost:5000/my-image
+docker pull localhost:5000/my-image
+docker pull 192.168.56.100:5000/my-image
+
+docker push localhost:5000/my-image → uploads your image to the local registry running on port 5000.
+
+docker pull localhost:5000/my-image → downloads the same image back from that local registry.
+
+docker pull 192.168.56.100:5000/my-image → pulls the image from a registry hosted on another machine (IP 192.168.56.100) on port 5000.
+
+
+//////////////////////Lab //////////////
+
+
+In this lab, we will explore some concepts related to Docker Registry and also practice setting up our own simple registry server.
+
+
+
+DockerHub is a hosted registry solution by Docker Inc.
+
+Besides public and private repositories, it also provides:
+
+Automated image builds
+Integration with source control platforms like:
+GitHub
+Bitbucket
+Webhooks
+Image versioning and tagging
+Team collaboration and access control
+Vulnerability scanning (on some plans)
+
+Which command is used for login to a self-hosted registry?
+
+>docker login [SERVER]
+
+
+Let's practice deploying a registry server on our own.
+Run a registry server with name equals to my-registry using registry:2 image with host port set to 5000, and restart policy set to always.
+
+Note: Registry server is exposed on port 5000 in the image.
+
+
+Here we are hosting our own registry using the open source Docker Registry.
+
+NOTE: You do not need to run docker login for this local registry setup because authentication is not configured. This registry allows for anonymous access.
+
+>docker run -d -p 5000:5000 --name my-registry --name always registry:2  OR better in this:
+
+docker run -d \
+  -p 5000:5000 \
+  --name my-registry \
+  --restart always \
+  registry:2
+
+
+
+root@docker-host ~ ➜  docker run -d \
+  -p 5000:5000 \
+  --name my-registry \
+  --restart always \
+  registry:2
+Unable to find image 'registry:2' locally
+2: Pulling from library/registry
+44cf07d57ee4: Pull complete 
+6d464ea18732: Pull complete 
+3493bf46cdec: Pull complete 
+8e82f80af0de: Pull complete 
+bbbdd6c6894b: Pull complete 
+32a76c78501f: Download complete 
+b537bf6d1146: Download complete 
+Digest: sha256:a3d8aaa63ed8681a604f1dea0aa03f100d5895b6a58ace528858a7b332415373
+Status: Downloaded newer image for registry:2
+f38ac4092d910d039e03f2ac93f2c67556d8b1ab262b153e83e27453a04e4535
+
+root@docker-host ~ ➜  docker ps
+CONTAINER ID   IMAGE        COMMAND                  CREATED         STATUS         PORTS                                         NAMES
+f38ac4092d91   registry:2   "/entrypoint.sh /etc…"   9 seconds ago   Up 8 seconds   0.0.0.0:5000->5000/tcp, [::]:5000->5000/tcp   my-registry
+
+
+
+Now, it's time to push some images to our registry server. Let's push two images for now: nginx:latest and httpd:latest.
+
+
+Note: Don't forget to pull them first.
+
+oot@docker-host ~ ✖ docker pull nginx:latest
+latest: Pulling from library/nginx
+b4a248c845e5: Pull complete 
+45381ecb0e2f: Pull complete 
+13fd728be9eb: Pull complete 
+830625e1ac85: Pull complete 
+5b4d6ff92fc4: Pull complete 
+5431d0092ffd: Pull complete 
+7f8b1a2b17d8: Pull complete 
+cc5f57206478: Download complete 
+5e6b66b5e5f1: Download complete 
+Digest: sha256:5aca99593157f4ae539a5dec1092a0ad8762f8e2eb1789085a13a0f5622369f6
+Status: Downloaded newer image for nginx:latest
+docker.io/library/nginx:latest
+
+root@docker-host ~ ➜  docker pull  httpd:latest
+latest: Pulling from library/httpd
+c51757aae13a: Pull complete 
+cb9e979b34b8: Pull complete 
+4f4fb700ef54: Pull complete 
+c5c211dc8965: Pull complete 
+7fc6b5038f86: Pull complete 
+492c10869e23: Download complete 
+e2025809a7e3: Download complete 
+Digest: sha256:bda12def1dc3b718a5314b4b26ca84927fdb3905091f11200d581186f240e4f6
+Status: Downloaded newer image for httpd:latest
+docker.io/library/httpd:latest
+
+
+root@docker-host ~ ✖ docker images
+                                                                                               i Info →   U  In Use
+IMAGE                                  ID             DISK USAGE   CONTENT SIZE   EXTRA
+alpine:latest                          5b10f432ef3d       13.1MB         3.95MB        
+httpd:latest                           bda12def1dc3        177MB         47.6MB        
+kodekloud/latest-webapp-mysql:latest   d5efbb3fe621        104MB         25.6MB        
+kodekloud/simple-webapp:latest         e5355b4c7804        131MB         31.8MB        
+mysql:latest                           c11782aa2a96        1.3GB          290MB        
+nginx:latest                           5aca99593157        241MB           66MB        
+postgres:latest                        270cac6290e2        650MB          168MB        
+redis:latest                           0c341492924c        204MB         55.3MB        
+registry:2                             a3d8aaa63ed8       37.4MB         10.3MB    U   
+ubuntu:latest                          f3d28607ddd7        160MB         45.3MB
+
+Push the images to local registry:
+
+docker push localhost:5000/my-image
+
+Will get an error:
+
+root@docker-host ~ ✖ docker push localhost:5000/nginx:latest
+The push refers to repository [localhost:5000/nginx]
+tag does not exist: localhost:5000/nginx:latest
+
+Need tag before we are pushing:
+
+root@docker-host ~ ✖ docker image tag nginx:latest localhost:5000/nginx:latest
+
+Now we can try to push:
+
+root@docker-host ~ ✖ docker push localhost:5000/nginx:latest
+The push refers to repository [localhost:5000/nginx]
+7f8b1a2b17d8: Pushed 
+5431d0092ffd: Pushed 
+45381ecb0e2f: Pushed 
+13fd728be9eb: Pushed 
+830625e1ac85: Pushed 
+5b4d6ff92fc4: Pushed 
+b4a248c845e5: Pushed 
+latest: digest: sha256:0a0b02fec34ea28aac0f7e0cf8403e5c9ee5fc201162eae5bf891a84e5599281 size: 2290
+
+i Info → Not all multiplatform-content is present and only the available single-platform image was pushed
+         sha256:5aca99593157f4ae539a5dec1092a0ad8762f8e2eb1789085a13a0f5622369f6 -> sha256:0a0b02fec34ea28aac0f7e0cf8403e5c9ee5fc201162eae5bf891a84e5599281
+
+
+Now TAG and push second image:
+
+root@docker-host ~ ✖ docker image tag httpd:latest localhost:5000/httpd:latest
+
+root@docker-host ~ ➜  docker push localhost:5000/httpd:latest
+The push refers to repository [localhost:5000/httpd]
+7fc6b5038f86: Pushed 
+c51757aae13a: Pushed 
+cb9e979b34b8: Pushed 
+5b4d6ff92fc4: Mounted from nginx 
+c5c211dc8965: Pushed 
+4f4fb700ef54: Pushed 
+latest: digest: sha256:2b7d8a7992076bf5ceb8bb363b4c8f2b8c655072e7478f45c5e537af28f6c167 size: 2093
+
+i Info → Not all multiplatform-content is present and only the available single-platform image was pushed
+         sha256:bda12def1dc3b718a5314b4b26ca84927fdb3905091f11200d581186f240e4f6 -> sha256:2b7d8a7992076bf5ceb8bb363b4c8f2b8c655072e7478f45c5e537af28f6c167
+
+
+To check the list of images pushed, use the following command:
+
+root@docker-host ~ ✖ curl localhost:5000/v2/_catalog
+{"repositories":["httpd","nginx"]}
+
+
+Let's remove all the dangling images we have locally.
+
+Use prune to remove them.
+
+How many images do we have now?
+
+Note: Make sure we don't have any running containers except our registry-sever.
+
+root@docker-host ~ ✖ docker ps
+CONTAINER ID   IMAGE        COMMAND                  CREATED         STATUS         PORTS                                         NAMES
+f38ac4092d91   registry:2   "/entrypoint.sh /etc…"   9 minutes ago   Up 9 minutes   0.0.0.0:5000->5000/tcp, [::]:5000->5000/tcp   my-registry
+
+All docker images we have:
+
+root@docker-host ~ ➜  docker images
+                                                                                               i Info →   U  In Use
+IMAGE                                  ID             DISK USAGE   CONTENT SIZE   EXTRA
+alpine:latest                          5b10f432ef3d       13.1MB         3.95MB        
+httpd:latest                           bda12def1dc3        177MB         47.6MB        
+kodekloud/latest-webapp-mysql:latest   d5efbb3fe621        104MB         25.6MB        
+kodekloud/simple-webapp:latest         e5355b4c7804        131MB         31.8MB        
+localhost:5000/httpd:latest            bda12def1dc3        177MB         47.6MB        
+localhost:5000/nginx:latest            5aca99593157        241MB           66MB        
+mysql:latest                           c11782aa2a96        1.3GB          290MB        
+nginx:latest                           5aca99593157        241MB           66MB        
+postgres:latest                        270cac6290e2        650MB          168MB        
+redis:latest                           0c341492924c        204MB         55.3MB        
+registry:2                             a3d8aaa63ed8       37.4MB         10.3MB    U   
+ubuntu:latest                          f3d28607ddd7        160MB         45.3MB 
+
+
+Remove ALL images (including unused AND used)  - but not for containers whish is running.docker registry is running so image for this container HAS NOT DELETED.
+
+docker image prune -a
+
+oot@docker-host ~ ✖ docker image prune -a
+WARNING! This will remove all images without at least one container associated to them.
+Are you sure you want to continue? [y/N] Y
+
+
+
+root@docker-host ~ ✖ docker images
+                                                                                               i Info →   U  In Use
+IMAGE        ID             DISK USAGE   CONTENT SIZE   EXTRA
+registry:2   a3d8aaa63ed8       37.4MB         10.3MB    U  
+
+
+Now, we can pull images from our registry-server as well. Use docker pull [server-addr/image-name] to pull the images that we pushed earlier.
+
+In our case, we can use:
+
+
+docker pull localhost:5000/nginx
+
+root@docker-host ~ ✖ curl localhost:5000/v2/_catalog
+{"repositories":["httpd","nginx"]}
+
+root@docker-host ~ ➜  docker pull localhost:5000/nginx:latest
+latest: Pulling from nginx
+5b4d6ff92fc4: Pull complete 
+13fd728be9eb: Pull complete 
+5431d0092ffd: Pull complete 
+830625e1ac85: Pull complete 
+b4a248c845e5: Pull complete 
+45381ecb0e2f: Pull complete 
+7f8b1a2b17d8: Pull complete 
+Digest: sha256:0a0b02fec34ea28aac0f7e0cf8403e5c9ee5fc201162eae5bf891a84e5599281
+Status: Downloaded newer image for localhost:5000/nginx:latest
+localhost:5000/nginx:latest
+
+Now we see this image again in IMAGES:
+
+root@docker-host ~ ✖ docker images
+                                                                                               i Info →   U  In Use
+IMAGE                         ID             DISK USAGE   CONTENT SIZE   EXTRA
+localhost:5000/nginx:latest   0a0b02fec34e        238MB         63.1MB        
+registry:2                    a3d8aaa63ed8       37.4MB         10.3MB    U  
+
+Finally, let's clean up our registry.
+
+Stop and remove the my-registry container.
+
+root@docker-host ~ ✖ docker ps
+CONTAINER ID   IMAGE        COMMAND                  CREATED          STATUS          PORTS                                         NAMES
+f38ac4092d91   registry:2   "/entrypoint.sh /etc…"   15 minutes ago   Up 15 minutes   0.0.0.0:5000->5000/tcp, [::]:5000->5000/tcp   my-registry
+
+root@docker-host ~ ➜  docker stop f38ac4
+f38ac4
+
+root@docker-host ~ ➜  docker rm f38ac4
+f38ac4
+
+///////////////////////Docker Orcestration - Docker Swarm ///////////
+
+
+
+Initialize the Swarm:
+docker swarm init
+
+Add worker nodes:
+docker swarm join --token <worker-token> <manager-ip>:2377
+
+Add manager nodes (optional)
+docker swarm join --token <manager-token> <manager-ip>:2377
+
+Verify the cluster
+docker node ls
+
+Deploy a service
+
+docker service create --name web --replicas 3 -p 80:80 nginx
+
+
+Check services
+docker service ls
+
+Inspect tasks (containers)
+>docker service ps web
+Shows where each replica is running.
+
+Scale a service
+
+docker service scale web=5
+
+Remove a service
+docker service rm web
+
+Leave the Swarm
+On a worker:
+docker swarm leave
+On a manager (to remove the cluster):
+docker swarm leave --force
+
+
+Summary Table
+Action	Command
+Initialize Swarm	docker swarm init
+Join worker	docker swarm join --token <worker-token> <manager-ip>:2377
+List nodes	docker node ls
+Create service	docker service create --name web --replicas 3 -p 80:80 nginx
+Scale service	docker service scale web=5
+Remove service	docker service rm web
+Leave Swarm	docker swarm leave --force
+
+
+Docker Swarm stack using a docker‑compose.yml
+version: "3.9"
+
+services:
+  web:
+    image: nginx:latest
+    ports:
+      - "80:80"
+    deploy:
+      replicas: 3
+      restart_policy:
+        condition: on-failure
+
+  redis:
+    image: redis:alpine
+    deploy:
+      replicas: 1
+
+Note: Swarm requires Compose version 3+ because it includes the deploy: section.
+
+
+Initialize Swarm (if not already)
+
+docker swarm init
+
+
+Deploy the stack
+Use docker stack deploy instead of docker compose up.
+docker stack deploy -c docker-compose.yml mystack
+
+-c → compose file
+
+mystack → stack name (prefix for all services)
+
+Swarm will:
+
+schedule containers across nodes
+
+create overlay networks
+
+ensure desired replicas
+
+load‑balance traffic
+
+Check the stack status:
+docker stack ls
+
+List services in the stack:
+docker stack services mystack
+
+See where tasks (containers) are running:
+
+docker stack ps mystack
+
+Update the stack:
+Just edit your docker-compose.yml and redeploy:
+docker stack deploy -c docker-compose.yml mystack
+
+Swarm performs:
+
+rolling updates
+
+zero‑downtime deployments
+
+rollback on failure
+
+Remove the stack:
+docker stack rm mystack
+
+This removes:
+
+services
+
+tasks
+
+networks created by the stack
+
+
+Summary Table
+Action	Command
+Initialize Swarm	docker swarm init
+Deploy stack	docker stack deploy -c docker-compose.yml mystack
+List stacks	docker stack ls
+List services	docker stack services mystack
+List tasks	docker stack ps mystack
+Update stack	docker stack deploy -c docker-compose.yml mystack
+Remove stack	docker stack rm mystack
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
