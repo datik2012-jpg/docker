@@ -1,0 +1,269 @@
+//////////////////Docker Network ///////////
+
+When we create network (not default created) will be created DNS 127.0.0.1 serevr which gives the option to containers creaetd in this netwrok to connect to each other by container name (ip not good idea cause 127.x.x.x ip addresss can be changed after container restart)
+
+Step 1 — Create a custom network 
+docker network create --driver bridge my-app
+
+Step 2 — Run the MySQL container
+docker run -d --name=mysql --network=my-app mysql
+
+Starts a container named mysql.
+
+Attaches it to the my-app network.
+
+Other containers on the same network can connect using mysql:3306.
+
+
+
+Step 3 — Run the web app container
+
+docker run -d --name=web --network=my-app my-webapp
+
+
+Starts a container named web.
+
+Also joins the my-app network.
+
+The web app can now connect to MySQL using the hostname mysql instead of an IP.
+
+Why this setup matters
+Container isolation — containers only talk to others on the same network.
+
+Service discovery — Docker auto‑resolves container names.
+
+Simplified configuration — no need for manual IPs or port mapping between containers.
+
+Security — internal traffic stays off the host’s public interface.
+
+
+
+Note: Docker compose always creates network defined:
+
+
+version: "3.9"
+
+services:
+  mysql:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+    networks:
+      - my-app
+
+  web:
+    image: my-webapp
+    depends_on:
+      - mysql
+    networks:
+      - my-app
+
+networks:
+  my-app:
+    driver: bridge
+
+
+Run: docker compose up -d
+
+Compose automatically:
+
+Creates the my-app network (bridge driver).
+
+Starts both containers.
+
+Connects them to the same network.
+
+Handles dependencies (depends_on ensures MySQL starts first).
+
+////////////////////////////////LAB Networking //////////////
+
+Explore the current setup and identify the number of networks that exist on this system.
+>docker network ls
+
+root@docker-host ~ ✖ docker network ls
+NETWORK ID     NAME      DRIVER    SCOPE
+abc07b6aa6fd   bridge    bridge    local
+238b23f4e2a9   host      host      local
+59b9cbf97489   none      null      local
+
+
+What is the ID associated with the bridge network?
+
+>docker inspect abc07b6aa6fd
+
+root@docker-host ~ ✖ docker inspect abc07b6aa6fd
+[
+    {
+        "Name": "bridge",
+        "Id": "abc07b6aa6fd709ef1bec60a49db4c71242ebb980a08f273a29c898acfd9c594",
+
+
+We just ran a container named alpine-1. Identify the network it is attached to.
+
+
+root@docker-host ~ ✖ docker ps
+CONTAINER ID   IMAGE     COMMAND        CREATED          STATUS          PORTS     NAMES
+903d369ccfb1   alpine    "sleep 1000"   51 seconds ago   Up 50 seconds             alpine-1
+
+>docker inspect 903d369ccfb1
+
+
+Networks": {
+                "host": {
+                    "IPAMConfig": null,
+                    "Links": null,
+                    "Aliases": null,
+                    "DriverOpts": null,
+                    "GwPriority": 0,
+                    "NetworkID": "238b23f4e2a934d6378c6a68d4521a33b9fcdab3b2b93e8894e2ea51de60b065",
+                    "EndpointID": "982b881bd1df0b26e3d64b87668acede55279085e6ef0a4b5ffea3e363ff6e7f",
+                    "Gateway": "",
+                    "IPAddress": "",
+                    "MacAddress": "",
+                    "IPPrefixLen": 0,
+                    "IPv6Gateway": "",
+                    "GlobalIPv6Address": "",
+                    "GlobalIPv6PrefixLen": 0,
+                    "DNSNames": null
+                }
+
+Answer: "host"
+
+What is the subnet configured on the bridge network?
+
+root@docker-host ~ ✖ docker network ls
+NETWORK ID     NAME      DRIVER    SCOPE
+abc07b6aa6fd   bridge    bridge    local
+238b23f4e2a9   host      host      local
+59b9cbf97489   none      null      local
+
+>docker inspect abc07b6aa6fd
+
+
+"Config": [
+                {
+                    "Subnet": "172.12.0.0/24",
+                    "Gateway": "172.12.0.1"
+                }
+
+Answer: 172.12.0.0/24
+
+
+Run a container named alpine-2 using the alpine image and attach it to the none network.
+
+>docker run -d --name=alpine-2 --network=none alpine
+3af5cc8ed339def13eac8b94acfa67f84ea02fda294f63db1e14fdc14567c201
+
+validation:
+
+root@docker-host ~ ✖ docker ps
+CONTAINER ID   IMAGE     COMMAND        CREATED         STATUS         PORTS     NAMES
+903d369ccfb1   alpine    "sleep 1000"   6 minutes ago   Up 6 minutes             alpine-2
+
+docker inspect 903d369
+ "Networks": {
+                "none": {
+ "Name": "/alpine-2",
+
+
+
+Create a new network named wp-mysql-network using the bridge driver. Allocate subnet as 182.18.0.0/24 and configure gateway as 182.18.0.1.
+
+>docker network create --driver bridge wp-mysql-network
+
+docker network create \
+  --driver bridge \
+  --subnet=182.18.0.0/24 \
+  --gateway=182.18.0.1 \
+  wp-mysql-network
+
+root@docker-host ~ ✖ docker network create \
+  --driver bridge \
+  --subnet=182.18.0.0/24 \
+  --gateway=182.18.0.1 \
+  wp-mysql-network
+d27d745c98ae4aac87184a708b54c337d0b06a4c8da549c456a0aca53e843994
+
+root@docker-host ~ ➜  docker network ls
+NETWORK ID     NAME               DRIVER    SCOPE
+abc07b6aa6fd   bridge             bridge    local
+238b23f4e2a9   host               host      local
+59b9cbf97489   none               null      local
+d27d745c98ae   wp-mysql-network   bridge    local
+
+
+Deploy a mysql database using the mysql:8.4 image and name it mysql-db. Attach it to the newly created network wp-mysql-network.
+
+Set the database password to db_pass123 using the MYSQL_ROOT_PASSWORD environment variable.
+
+
+docker run -d \
+  --name=mysql-db \
+  --network=wp-mysql-network \
+  -e MYSQL_ROOT_PASSWORD=db_pass123 \
+  mysql:8.4
+
+root@docker-host ~ ✖ docker run -d \
+  --name=mysql-db \
+  --network=wp-mysql-network \
+  -e MYSQL_ROOT_PASSWORD=db_pass123 \
+  mysql:8.4
+Unable to find image 'mysql:8.4' locally
+8.4: Pulling from library/mysql
+f148eeb1a828: Pull complete 
+63b1a26b5169: Pull complete 
+ab549d4e00e7: Pull complete 
+7865e9f32c41: Pull complete 
+ca90c44920b4: Pull complete 
+765b9b45fc65: Pull complete 
+63892f528d32: Pull complete 
+b9f6fc0eea0c: Pull complete 
+d3bae0286aad: Pull complete 
+eb33bcfe4506: Download complete 
+95cf9b0caf15: Download complete 
+Digest: sha256:c36050afdca850f23cef85703f84c7531a5ae155a11b5ee1c60acb09937c4084
+Status: Downloaded newer image for mysql:8.4
+b036789dbe2e16c66ee66a3169f5b248f42fbca1d0858d9b721de19bc50d8b8c
+
+root@docker-host ~ ✖ docker ps
+CONTAINER ID   IMAGE       COMMAND                  CREATED          STATUS          PORTS                 NAMES
+b036789dbe2e   mysql:8.4   "docker-entrypoint.s…"   14 seconds ago   Up 14 seconds   3306/tcp, 33060/tcp   mysql-db
+
+
+Deploy a web application named webapp using the kodekloud/latest-webapp-mysql image.
+
+Expose the container’s port 8080 to port 38080 on the host.
+
+The application makes use of two environment variable:
+
+DB_Host with the value mysql-db
+DB_Password with the value db_pass123
+Make sure to attach it to the newly created network called wp-mysql-network.
+
+
+Note: We need to link the MySQL and webapp containers.
+
+
+docker run -d \
+  --name=webapp \
+  --network=wp-mysql-network \
+  -p 38080:8080 \
+  -e DB_Host=mysql-db \
+  -e DB_Password=db_pass123 \
+  kodekloud/latest-webapp-mysql
+
+Run: 
+root@docker-host ~ ✖ docker run -d \
+  --name=webapp \
+  --network=wp-mysql-network \
+  -p 38080:8080 \
+  -e DB_Host=mysql-db \
+  -e DB_Password=db_pass123 \
+  kodekloud/latest-webapp-mysql
+
+Validation: https://38080-port-2r6ulooo476coigy.labs.kodekloud.com/
+Environment Variables: DB_Host=mysql-db; DB_Database=Not Set; DB_User=Not Set; DB_Password=db_pass123;
+b34a3a1c40807f788f3ff4928ee29f6f011483c3391c4741c336f124269c0246
+
+
+

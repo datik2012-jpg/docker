@@ -1,0 +1,381 @@
+/////////////////Docker Engine //////////
+
+Docker Enngine includes 3 pieces:
+
+1) Docker Daemon - in charge of imagesmcontainers,volumes,networks
+2)Docker API - Server with programms,tools,integrations
+3)Docker CLI - docker run, docker stop, docker rmi
+
+
+Docker Daemon can be in remote host and docker cli can communicate with 
+Example of run comtainer in remote host:
+docker -H:10.123.2.1:2376 --tlsevirity run nginx
+Old port not allowed anymore: 2375 !!! Do not use it - no tls port
+Recommended to use ssh:  ssh://user@host 
+
+
+How Docker actually runs containers under the hood:
+
+Layer 1 — Docker CLI
+You type commands like docker run or docker build.
+The CLI sends those commands to the Docker daemon (dockerd) via a REST API.
+
+Layer 2 — dockerd
+This is the Docker daemon, the brain of Docker.
+It handles Docker‑specific tasks such as:
+
+Managing images, networks, and volumes
+
+Authenticating with Docker Hub
+
+Exposing the REST API
+
+It’s the part that makes Docker “Docker.”
+
+
+
+Layer 3 — containerd
+This is a general container runtime, not Docker‑specific.
+It’s responsible for:
+
+Pulling images
+
+Managing container lifecycles (start, stop, supervise)
+
+Handling container metadata
+
+Kubernetes talks directly to containerd, skipping dockerd entirely — that’s why the diagram shows the Kubernetes logo pointing to it.
+
+
+
+Layer 4 — runc
+This is the low‑level launcher that actually starts containers.
+It implements the OCI (Open Container Initiative) standard, meaning it’s compatible with other runtimes too.
+It interacts directly with the Linux kernel using:
+
+namespaces (for isolation)
+
+cgroups (for resource limits)
+
+exec (to run processes)
+
+
+Bottom layer — Linux kernel
+The foundation that provides the isolation and resource control mechanisms containers rely on.
+
+
+
+
+cgroups reminder:
+
+Great memory check, Dani — cgroups (short for control groups) are a Linux kernel feature that Docker and other container runtimes use to limit and isolate system resources for each container.
+
+Here’s how they fit in:
+
+⚙️ What cgroups do
+Resource limits — cap how much CPU, memory, disk I/O, or network bandwidth a container can use.
+
+Isolation — prevent one container from hogging resources and starving others.
+
+Accounting — track resource usage per container for monitoring and billing.
+
+Prioritization — assign CPU shares or weights so critical containers get more compute time.
+
+When you run:
+
+bash: docker run --memory=512m --cpus=1 nginx
+Docker translates those flags into cgroup rules that the kernel enforces — ensuring the container never exceeds 512 MB RAM or one CPU core.
+
+
+Relationship to other layers
+In the diagram you shared:
+
+runc applies cgroup settings when launching containers.
+
+The Linux kernel enforces them.
+
+Higher layers (containerd, dockerd) just pass configuration down.
+
+//////////////////////////////Namespaces ////////////////
+
+/////////////////////////////Volumes //////////
+
+Docker keeps volumes under /var/lib/docker/volumes/ on the host.
+
+Each volume (like datavolume) is a directory that Docker manages.
+
+When you run a container with a volume mount, Docker connects that host directory to a path inside the container.
+
+Host path:
+/var/lib/docker/volumes/datavolume   - where datavolume a name which we give
+In the running docker path will be:
+/var/lib/sql
+
+Example:
+docker volume create datavolume
+docker run -v datavolume:/var/lib/mysql mysql
+
+Second option is BIND MOUNT :
+
+Bind mounts are another way to connect storage between your host and containers, but they behave differently from Docker volumes.
+
+A bind mount directly links a specific directory or file on your host to a path inside the container.
+Example:docker run -v /home/dani/app:/usr/src/app node
+
+
+This means:
+
+/home/dani/app on your host is mounted inside the container at /usr/src/app.
+
+Any changes you make in either place instantly appear in the other.
+
+When to use bind mounts
+Use them when you need real‑time access to local files:
+
+Development environments — edit code on your host and see changes live inside the container.
+
+Configuration sharing — mount config files or secrets from your host.
+
+Debugging — inspect logs or temporary data directly from your host.
+
+
+
+Feature	                 Bind Mount	                     Named Volume
+Location	Any host path you specify	        Managed under /var/lib/docker/volumes/
+Lifecycle	Exists as long as the host path exists	Managed by Docker (can be created/deleted via CLI)
+Portability	Tied to your host filesystem	        Portable between hosts via Docker
+Use case	Development, debugging	                Persistent data (databases, production apps)
+
+Modern way to BIND MOUNT:
+
+docker run --mount type=bind,source=/data/mysql,target=/var/lib/mysql mysql
+
+/////////////////////////Docker Lab 7 /////////////
+
+Where are the files related to Docker containers and images stored?
+
+/var/lib/docker
+
+
+Run a mysql container named mysql-db using the mysql image.
+
+Set the database password to db_pass123
+
+
+Note: Remember to run it in the detached mode.
+
+docker run -it --rm -d \
+  --name mysql-db \
+  -e PGUSER=totoro \
+  -e PGPASSWORD=myfriend \
+  -e PGHOST=db \
+  -e PGPORT=26257 \
+  -e PGDATABASE=mydb \
+  your-image-name
+
+Mine:
+
+docker run -d \
+  --name mysql-db \
+  -e MYSQL_ROOT_PASSWORD=db_pass123 \
+  mysql
+
+Cmd>
+root@docker-host lib/docker/containers ✖ docker run -d \
+  --name mysql-db \
+  -e MYSQL_ROOT_PASSWORD=db_pass123 \
+  mysql
+
+Validation:
+
+root@docker-host lib/docker/containers ✖ docker ps
+CONTAINER ID   IMAGE     COMMAND                  CREATED          STATUS          PORTS                 NAMES
+788056472d20   mysql     "docker-entrypoint.s…"   19 seconds ago   Up 19 seconds   3306/tcp, 33060/tcp   mysql-db
+
+
+788056472d20cc76061377c446424209222e576d66db7228cc9a66456afbc632
+
+
+We have just written some data into the database container.
+
+To view the information we wrote, run the get-data.sh script available in the /root directory.
+
+How many customers data have been written to the database?
+
+Command: bash get-data.sh
+
+
+root@docker-host ~ ➜  cat get-data.sh
+docker exec mysql-db mysql -pdb_pass123 -e 'use foo; select * from myTable'
+
+root@docker-host ~ ➜  bash get-data.sh
+mysql: [Warning] Using a password on the command line interface can be insecure.
+id      Name    Phone   Email
+1       Kareem  130-5655        Duis.volutpat.nunc@quamCurabitur.org
+2       Ruby    1-584-149-0770  Nulla.tempor@vitaeorciPhasellus.org
+3       Rowan   199-8663        consectetuer.adipiscing.elit@Sedmalesuada.co.uk
+4       Alisa   220-6017        elementum.sem.vitae@enimMauris.edu
+5       Ella    731-0337        fermentum@nec.net
+6       Tiger   658-4480        quis.diam@odiovelest.net
+7       Felix   1-274-848-3378  Mauris.vel@arcu.com
+8       Karina  1-390-796-3451  sagittis.semper@odioapurus.co.uk
+9       Davis   605-8539        venenatis.vel@risusDonecnibh.com
+10      Mohammad        1-590-174-1489  ornare.sagittis.felis@natoque.ca
+11      Zane    362-1770        Aenean.euismod@condimentum.co.uk
+12      Piper   1-231-386-6903  nunc.sed.pede@nascetur.ca
+13      Marshall        1-383-729-4990  Cras.interdum.Nunc@neceuismod.ca
+14      Zena    241-6641        Fusce.mollis.Duis@lobortis.org
+15      Abdul   1-748-387-9935  eget.lacus.Mauris@Crasvehicula.com
+16      Chase   1-401-241-9169  ante.dictum.mi@nascetur.org
+17      Zahir   921-0663        non@nonummyutmolestie.edu
+18      Brenda  1-691-909-5827  Quisque.ac@magnaCras.co.uk
+19      Laura   1-562-983-9565  Quisque.ornare.tortor@sollicitudinadipiscing.ca
+20      Madison 1-348-737-0587  Quisque.varius@Intinciduntcongue.org
+21      Tanek   991-6278        dignissim.magna@Pellentesqueutipsum.net
+22      Dakota  893-0792        Nullam.enim.Sed@nulla.net
+23      Boris   1-297-302-5792  non.sollicitudin@eleifendegestasSed.co.uk
+24      Celeste 723-6729        mauris.rhoncus@eunulla.edu
+25      Connor  1-203-901-7531  et@loremipsumsodales.edu
+26      Perry   1-756-607-9187  eros.turpis@tristiquepharetra.co.uk
+27      Hayfa   1-609-407-3019  non.lobortis.quis@malesuadafringilla.net
+28      Todd    343-0454        id.erat@arcu.org
+29      Fuller  881-7273        non.feugiat.nec@adipiscingelit.net
+30      Rama    1-927-605-0610  nonummy.ultricies.ornare@malesuada.co.uk
+
+
+The database crashed. Are you able to view the data now?
+
+Use the same command to try and view data. Try to find the container.
+
+
+root@docker-host ~ ➜  bash get-data.sh
+Error response from daemon: No such container: mysql-db
+
+
+
+Run a mysql container again, but this time map a volume to the container so that the data stored by the container is stored at /opt/data on the host.
+
+Use the same name : mysql-db and same password: db_pass123 as before.
+
+
+Note: Mysql stores data at /var/lib/mysql inside the container.
+
+Check if /opt/data exist at the moment:
+
+root@docker-host ~ ✖ ls /opt/data
+ls: cannot access '/opt/data': No such file or directory
+
+
+
+Cmd>
+docker run -d \
+  --name mysql-db \
+  -e MYSQL_ROOT_PASSWORD=db_pass123 \
+  -v /opt/data:/var/lib/mysql \
+  mysql
+
+edfafa48a5bf72950ba6f55c00bda6a2508743cf664b80b614ec1510878938a8
+
+Validations container is running:
+
+root@docker-host ~ ✖ docker ps
+CONTAINER ID   IMAGE     COMMAND                  CREATED          STATUS          PORTS                 NAMES
+edfafa48a5bf   mysql     "docker-entrypoint.s…"   17 seconds ago   Up 16 seconds   3306/tcp, 33060/tcp   mysql-db
+
+Check if path exist:
+
+root@docker-host ~ ✖ ls /opt/data
+'#ib_16384_0.dblwr'   binlog.000001   client-cert.pem   mysql                   private_key.pem   undo_001
+'#ib_16384_1.dblwr'   binlog.000002   client-key.pem    mysql.ibd               public_key.pem    undo_002
+'#innodb_redo'        binlog.index    ib_buffer_pool    mysql.sock              server-cert.pem
+'#innodb_temp'        ca-key.pem      ibdata1           mysql_upgrade_history   server-key.pem
+ auto.cnf             ca.pem          ibtmp1            performance_schema      sys
+
+
+We have now re-written data again. Run the get-data.sh script to ensure data is present.
+
+Command: bash get-data.sh
+
+root@docker-host ~ ✖ bash get-data.sh
+mysql: [Warning] Using a password on the command line interface can be insecure.
+id      Name    Phone   Email
+1       Kareem  130-5655        Duis.volutpat.nunc@quamCurabitur.org
+2       Ruby    1-584-149-0770  Nulla.tempor@vitaeorciPhasellus.org
+3       Rowan   199-8663        consectetuer.adipiscing.elit@Sedmalesuada.co.uk
+4       Alisa   220-6017        elementum.sem.vitae@enimMauris.edu
+5       Ella    731-0337        fermentum@nec.net
+6       Tiger   658-4480        quis.diam@odiovelest.net
+7       Felix   1-274-848-3378  Mauris.vel@arcu.com
+8       Karina  1-390-796-3451  sagittis.semper@odioapurus.co.uk
+9       Davis   605-8539        venenatis.vel@risusDonecnibh.com
+10      Mohammad        1-590-174-1489  ornare.sagittis.felis@natoque.ca
+11      Zane    362-1770        Aenean.euismod@condimentum.co.uk
+12      Piper   1-231-386-6903  nunc.sed.pede@nascetur.ca
+13      Marshall        1-383-729-4990  Cras.interdum.Nunc@neceuismod.ca
+14      Zena    241-6641        Fusce.mollis.Duis@lobortis.org
+15      Abdul   1-748-387-9935  eget.lacus.Mauris@Crasvehicula.com
+16      Chase   1-401-241-9169  ante.dictum.mi@nascetur.org
+17      Zahir   921-0663        non@nonummyutmolestie.edu
+18      Brenda  1-691-909-5827  Quisque.ac@magnaCras.co.uk
+19      Laura   1-562-983-9565  Quisque.ornare.tortor@sollicitudinadipiscing.ca
+20      Madison 1-348-737-0587  Quisque.varius@Intinciduntcongue.org
+21      Tanek   991-6278        dignissim.magna@Pellentesqueutipsum.net
+22      Dakota  893-0792        Nullam.enim.Sed@nulla.net
+23      Boris   1-297-302-5792  non.sollicitudin@eleifendegestasSed.co.uk
+24      Celeste 723-6729        mauris.rhoncus@eunulla.edu
+25      Connor  1-203-901-7531  et@loremipsumsodales.edu
+26      Perry   1-756-607-9187  eros.turpis@tristiquepharetra.co.uk
+27      Hayfa   1-609-407-3019  non.lobortis.quis@malesuadafringilla.net
+28      Todd    343-0454        id.erat@arcu.org
+29      Fuller  881-7273        non.feugiat.nec@adipiscingelit.net
+30      Rama    1-927-605-0610  nonummy.ultricies.ornare@malesuada.co.uk
+
+
+Disaster strikes.. again! And the database crashed again. But this time we have the data stored at /opt/data directory. Re-deploy a new mysql instance using the same options as before:
+
+Name: mysql-db
+MYSQL_ROOT_PASSWORD: db_pass123
+Image: mysql
+Volume mapping: /opt/data on host to /var/lib/mysql on container
+
+root@docker-host ~ ✖ docker ps
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+
+Command to run:
+docker run -d \
+  --name mysql-db \
+  -e MYSQL_ROOT_PASSWORD=db_pass123 \
+  -v /opt/data:/var/lib/mysql \
+  mysql
+
+5d3d29a972bd1f5f96eb0f20d8b9a1e5301d72733f6e96f52f16ae656edd5ec5
+
+Validation:
+root@docker-host ~ ✖ docker ps
+CONTAINER ID   IMAGE     COMMAND                  CREATED          STATUS          PORTS                 NAMES
+5d3d29a972bd   mysql     "docker-entrypoint.s…"   15 seconds ago   Up 14 seconds   3306/tcp, 33060/tcp   mysql-db
+
+root@docker-host ~ ➜  cat  get-data.sh
+docker exec mysql-db mysql -pdb_pass123 -e 'use foo; select * from myTable'
+
+Notice that we didn't have to write the data again - it was already saved to the host directory /opt/data during the previous container run.
+
+When we ran the container this time, the data was picked up from the same path automatically.
+
+This is how Docker volumes give us data persistence!
+
+
+Because named volumes are global objects, not tied to any container.
+
+You can list them:docker volume ls
+
+You can inspect them:docker inspect mysql_data
+
+You can delete volume manually: docker volume rm mysql_data
+
+But Docker will never delete a volume automatically unless you explicitly ask it to (e.g., docker rm -v or docker volume prune).
+
+///////////////////////////////////////////////////////
+
+
+
