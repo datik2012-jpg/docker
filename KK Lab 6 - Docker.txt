@@ -1,0 +1,291 @@
+//////////////////Docker Lab 6 ///////////////
+
+First, create a Docker network named clicknet. This should be a bridge network.
+
+Do not remember the command so start to use docker --help where i can see "network" command and then i can do search docker network --help
+
+
+
+root@docker-host ~ ➜  docker network --help
+Usage:  docker network COMMAND
+
+Manage networks
+
+Commands:
+  connect     Connect a container to a network
+  create      Create a network
+  disconnect  Disconnect a container from a network
+  inspect     Display detailed information on one or more networks
+  ls          List networks
+  prune       Remove all unused networks
+  rm          Remove one or more networks
+
+Run 'docker network COMMAND --help' for more information on a command.
+
+
+Now i see "create" option and can proceed with a next step ,with my search: docker network create --help
+
+root@docker-host ~ ➜  docker network create --help
+Usage:  docker network create [OPTIONS] NETWORK
+
+Create a network
+
+Options:
+      --attachable            Enable manual container attachment
+      --aux-address map       Auxiliary IPv4 or IPv6 addresses used by Network
+                              driver (default map[])
+      --config-from string    The network from which to copy the configuration
+      --config-only           Create a configuration only network
+  -d, --driver string         Driver to manage the Network (default "bridge")
+      --gateway ipSlice       IPv4 or IPv6 Gateway for the master subnet (default [])
+      --ingress               Create swarm routing-mesh network
+      --internal              Restrict external access to the network
+      --ip-range ipNetSlice   Allocate container ip from a sub-range (default [])
+      --ipam-driver string    IP Address Management Driver (default "default")
+      --ipam-opt map          Set IPAM driver specific options (default map[])
+      --ipv4                  Enable or disable IPv4 address assignment (default true)
+      --ipv6                  Enable or disable IPv6 address assignment
+      --label list            Set metadata on a network
+  -o, --opt map               Set driver specific options (default map[])
+      --scope string          Control the network's scope
+      --subnet strings        Subnet in CIDR format that represents a network segment
+
+
+Now i see that i can run:  (where clicknet is the name of the network)
+
+root@docker-host ~ ✖ docker network create -d bridge clicknet
+00b7795737b91853f48983155b41fdd516c00c7c8d092ab0565271daeaf7be48
+
+Valudation:
+>docker network ls
+
+Been created bridge with a "clicknet" name:
+
+
+root@docker-host ~ ✖ docker network ls
+NETWORK ID     NAME       DRIVER    SCOPE
+ece80a974e05   bridge     bridge    local
+00b7795737b9   clicknet   bridge    local
+
+
+Create a redis database container named redis using the image redis:alpine, running in the background.
+
+Attach it to the clicknet Docker network that you created in the previous task.
+
+Check the image redis:alpine is not exist so we can pull it or we can run and docker will pull it with a next command (docker run):
+
+root@docker-host ~ ➜  docker images
+                                                                     i Info →   U  In Use
+IMAGE                                  ID             DISK USAGE   CONTENT SIZE   EXTRA
+alpine:latest                          5b10f432ef3d       13.1MB         3.95MB        
+kodekloud/latest-webapp-mysql:latest   d5efbb3fe621        104MB         25.6MB        
+kodekloud/simple-webapp:latest         e5355b4c7804        131MB         31.8MB        
+mysql:latest                           c11782aa2a96        1.3GB          290MB        
+nginx:alpine                           feb6f75a08aa       93.9MB           27MB        
+nginx:latest                           06aa3d7be10b        240MB         65.9MB        
+postgres:latest                        270cac6290e2        650MB          168MB        
+redis:latest                           0c341492924c        204MB         55.3MB        
+ubuntu:latest                          f3d28607ddd7        160MB         45.3MB 
+
+Image exist so we can try to run next command: 
+
+>docker run -d --name redis --network clicknet redis:alpine
+
+Validation containers is running:
+
+root@docker-host ~ ✖ docker ps
+CONTAINER ID   IMAGE          COMMAND                  CREATED              STATUS              PORTS      NAMES
+2d747de16101   redis:alpine   "docker-entrypoint.s…"   About a minute ago   Up About a minute   6379/tcp   redis
+
+Ispect if container is using correct network:
+
+>docker inspect 2d747de
+
+   "Networks": {
+                "clicknet": {
+                    "IPAMConfig": null,
+                    "Links": null,
+
+
+
+Next, create a simple container named clickcounter using the image kodekloud/click-counter, attach it to the clickcounter network from the earlier task, and then expose it on host port 8085.
+
+
+The clickcounter app runs on port 5000.
+
+docker run -d --name clickcounter --network clicknet -p 8085:5000 kodekloud/click-counter
+
+
+
+root@docker-host ~ ➜  docker run -d --name clickcounter --network clicknet -p 8085:5000 kodekloud/click-counter
+Unable to find image 'kodekloud/click-counter:latest' locally
+latest: Pulling from kodekloud/click-counter
+540db60ca938: Pull complete 
+156f0b0493cb: Pull complete 
+a7ad1a75a999: Pull complete 
+3fe82d8a2401: Pull complete 
+ec9e91bed5a2: Pull complete 
+473063430a4f: Pull complete 
+37ce6546d5dd: Pull complete 
+4a41f7c94204: Pull complete 
+767433e10bb0: Pull complete 
+452c68a16ccd: Pull complete 
+Digest: sha256:530e4532a718e8f5cbda05844a6c0638ebe8898fa4c4307ee6afbdd5d1f213db
+Status: Downloaded newer image for kodekloud/click-counter:latest
+5e0c308ebfedf1f5331ad9ba650c60daf3942a1f4d6d0881bf4d17b8ede75637
+
+Validation:
+
+root@docker-host ~ ✖ docker ps
+CONTAINER ID   IMAGE                     COMMAND                  CREATED          STATUS          PORTS                                         NAMES
+5e0c308ebfed   kodekloud/click-counter   "flask run"              15 seconds ago   Up 14 seconds   0.0.0.0:8085->5000/tcp, [::]:8085->5000/tcp   clickcounter
+
+
+You can now access this application using the Click-Counter tab above the terminal.
+
+Refresh the page and see the count increase.
+
+In url you will see every refresh count +1 : https://8085-port-kagqxesls27app4k.labs.kodekloud.com/
+
+
+Let's clean up the resources created in the previous steps.
+
+Delete the redis and clickcounter containers, alongwith the clicknet network you had created.
+
+
+root@docker-host ~ ✖ docker ps
+CONTAINER ID   IMAGE                     COMMAND                  CREATED          STATUS          PORTS                                         NAMES
+5e0c308ebfed   kodekloud/click-counter   "flask run"              15 seconds ago   Up 14 seconds   0.0.0.0:8085->5000/tcp, [::]:8085->5000/tcp   clickcounter
+2d747de16101   redis:alpine              "docker-entrypoint.s…"   8 minutes ago    Up 8 minutes    6379/tcp 
+
+Now need to stop both containers:
+
+root@docker-host ~ ✖ docker stop 5e0c308 2d747de
+5e0c308
+2d747de
+
+
+Validate they are not running and been stopped:
+
+root@docker-host ~ ✖ docker ps -a
+CONTAINER ID   IMAGE                     COMMAND                  CREATED          STATUS                        PORTS     NAMES
+5e0c308ebfed   kodekloud/click-counter   "flask run"              2 minutes ago    Exited (137) 22 seconds ago             clickcounter
+2d747de16101   redis:alpine              "docker-entrypoint.s…"   10 minutes ago   Exited (0) 32 seconds ago               redis
+
+root@docker-host ~ ➜  ^C
+
+root@docker-host ~ ✖ docker ps
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+
+Remove stopped containers:
+
+root@docker-host ~ ✖ docker rm 5e0c308 2d747de
+5e0c308
+2d747de
+
+Delete clicknet network:
+
+docker network --help can help to see the correct command:
+
+
+root@docker-host ~ ✖ docker network --help
+Usage:  docker network COMMAND
+
+Manage networks
+
+Commands:
+  connect     Connect a container to a network
+  create      Create a network
+  disconnect  Disconnect a container from a network
+  inspect     Display detailed information on one or more networks
+  ls          List networks
+  prune       Remove all unused networks
+  rm          Remove one or more networks
+
+Run 'docker network COMMAND --help' for more information on a command.
+
+
+Now we see docker network rm "nameof the network"
+We might want to LIST all existing networks at the moment: docker network ls
+
+root@docker-host ~ ✖ docker network ls
+NETWORK ID     NAME       DRIVER    SCOPE
+ece80a974e05   bridge     bridge    local
+00b7795737b9   clicknet   bridge    local
+238b23f4e2a9   host       host      local
+59b9cbf97489   none       null      local
+
+Remove the clicknet:
+>docker network rm clicknet
+
+root@docker-host ~ ✖ docker network rm clicknet
+clicknet
+
+You saw how we first created a Docker network and then attached our containers to it.
+
+Docker Compose simplifies this entire process by allowing us to define multiple containers, networks, ports, and environment variables inside a single compose.yaml file.
+
+We will see this in action in the next task.
+
+created docker compose.yaml
+
+root@docker-host ~/clickcounter ➜  cat compose.yaml
+services:
+  redis:
+    image: redis:alpine
+
+  clickcounter:
+    image: kodekloud/click-counter
+    ports: 
+      - "8085:5000"  
+
+Run docker compose:
+
+root@docker-host ~/clickcounter ✖ docker compose up -d
+[+] up 3/3
+ ✔ Network clickcounter_default          Created                                     0.1s
+ ✔ Container clickcounter-redis-1        Started                                     0.3s
+ ✔ Container clickcounter-clickcounter-1 Started 
+
+Note: see first line default network been created , lets check which type of networ is this - is bridge as default:
+root@docker-host ~/clickcounter ✖ docker network ls
+NETWORK ID     NAME                   DRIVER    SCOPE
+ece80a974e05   bridge                 bridge    local
+290d431bc28b   clickcounter_default   bridge    local
+
+Note : if docker compose file has different name run like this: docker compose -f dani-compose.yaml up
+
+Validation:
+
+root@docker-host ~/clickcounter ✖ docker ps
+CONTAINER ID   IMAGE                     COMMAND                  CREATED              STATUS              PORTS                                         NAMES
+3579ebec8bd4   redis:alpine              "docker-entrypoint.s…"   About a minute ago   Up About a minute   6379/tcp                                      clickcounter-redis-1
+830d999176ce   kodekloud/click-counter   "flask run"              About a minute ago   Up About a minute   0.0.0.0:8085->5000/tcp, [::]:8085->5000/tcp   clickcounter-clickcounter-1
+
+
+Note:
+0.0.0.0:8085->5000/tcp . So in my pc i need to url from that port 8085 or how it works?
+
+Yes, if you see a port mapping like 0.0.0.0:8085->5000/tcp in your docker ps output, it means that port 5000 inside the container is published to port 8085 on all network interfaces of your host machine.
+
+To access the service running inside your container (on port 5000), you should use port 8085 on your PC. For example, if it's a web application, you would open your browser and go to:
+
+http://localhost:8085
+or
+
+http://127.0.0.1:8085
+
+Later to see how to create multiple docker application: 
+
+This will forward your request to port 5000 inside the container.
+
+Please click on the links below for further reference:
+
+https://docs.docker.com/compose/
+
+https://docs.docker.com/engine/reference/commandline/compose/
+
+https://github.com/dockersamples/example-voting-app
+
+
+
