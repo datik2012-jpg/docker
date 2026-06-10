@@ -1,0 +1,202 @@
+///////////////Docker Engine ///////
+
+Docker Engine includes:Dcoker CLI,Docker API,Docker Daemon
+
+Namespaces PID:
+
+PID1 : 
+  PID2:
+  PID3:
+  PID4: - > PID1 (inside docker)
+
+1.Run docker container
+2.Validate container is running:docker ps
+3.Run command to see processes in container itself: docker exec 5fdr545 ps -eaf   - where ps -eaf the command to see the processes
+PID 1 - we can see is runnin in processes docker-java-home
+4.Now we can run ps -eaf in the Docker Host and see all processes which are running
+ ps -aef | grep docker-java-home
+and we will see different Process ID : 27700
+
+So what we learn is the same process which is running in docker and in the docker host have different PID . Cause docker is using namespaces (to separate everything and be isolated , and underline it is just another process which is running on the host) 
+
+///////////////////Docker Storage /////////////
+
+When docker installed it creates /var/lib/docker with multiple folders inside
+
+Create volume in that path where volumes: docker volume create data_volume
+Will be created: /var/lib/docker/volumes/data_volume
+So when we run next time a docker we can mount this volume /var/lib/docker/volumes/data_volume to the docker /var/lib/xxxx :
+docker run -v /var/lib/docker/volumes/data_volume:/var/lib/mmysql  alpine:v1  - use the path when path is not part of docker installation (another location which is not par of /var/lib/docker/....  this is BIND mounting)
+or will do the same docker run -v data_volume:/var/lib/mmysql  alpine:v1  - command is named VOLUME MOUNTING
+
+So now all the data in case destoryed container  will be left in the volume: /var/lib/docker/volumes/data_volume
+
+Note:if volume not exist before /var/lib/docker/volumes/data_volume and we run docker run -v data_volume:/var/lib/mmysql  alpine:v1 it will be created automatically
+
+Another BIND mounting way:
+
+docker run \
+  --mount type=bind,source=/data/mysql,target=/var/lib/mysql mysql
+
+Docker uses storage drivers to manage how container layers and images are stored on disk.
+Different drivers have different performance, compatibility, and reliability characteristics — so choosing the right one matters
+
+Driver	Platform	Key Traits	Best Use Case
+overlay2	Linux	Modern, fast, stable; uses Linux OverlayFS	Default for most modern Linux distros
+aufs	Linux	Older union filesystem; good compatibility	Legacy systems (Ubuntu < 18.04)
+btrfs	Linux	Snapshotting, subvolumes, checksums	Advanced setups needing snapshots
+zfs	Linux	High reliability, compression, snapshots	Enterprise or data‑intensive workloads
+devicemapper	Linux	Block‑level storage; slower, complex	Legacy RHEL/CentOS setups
+vfs	Cross‑platform	Simple copy‑on‑write; no layering	Debugging or non‑production use
+windowsfilter	Windows	NTFS‑based layering	Default on Windows containers
+
+////////////////Demo ////////////
+
+Get more info about docker installed where you can find Storage driver - aufs and additional information like root dir and etc:
+docker info | more 
+
+Docker installed we have next folder structure we can see at:
+>ls -l /var/lib/docker  - list default folders structure aufs.builder,containers,image,network,plugins,swarm,tmp,trust,volumes,diff,layers,mnt
+
+
+Docker data directory:
+Each folder represents a different subsystem that Docker uses to manage containers, images, networks, and volumes.
+
+Folder	Purpose	Description
+aufs	Storage driver data	Contains layered filesystem data when Docker uses the AUFS driver. Each container’s writable layer and image layers live here.
+builder	Build cache	Stores intermediate build stages and cache metadata used by docker build.
+containers	Container runtime data	Holds metadata and logs for each container (config.json, hostname, mounts, etc.).
+image	Image metadata	Contains image manifests, layer references, and version info for all pulled or built images.
+network	Networking configuration	Stores bridge, overlay, and other network definitions created by Docker.
+plugins	Plugin data	Keeps installed Docker plugins (volume, network, authorization) and their configuration.
+swarm	Swarm cluster state	Contains Swarm manager data — cluster configs, certificates, and Raft logs.
+tmp	Temporary files	Used for transient data during builds or container operations.
+trust	Content trust	Stores Notary signatures and keys for Docker Content Trust (image signing).
+volumes	Persistent volumes	Holds data for named volumes mounted into containers. Each volume has its own subfolder.
+
+
+docker info | grep Storage
+
+
+To see the history of the image - how it was build
+>docker images - to see the all images and their names
+>docker history "imagename" - will otivie the information how this image made
+
+Something cool ,instead to run the docker image we can run: /var/lib/docker/aufs/diff/aXXXXXXXXXXXXX  - and it will run the docker which created this script which stored by docker
+
+
+
+Docker file with simple FLUSK app:
+
+FROM ubuntu:17.04
+
+RUN apt-get update && apt-get install -y python python-pip
+
+RUN pip install flask
+
+COPY app.py /opt/
+
+ENTRYPOINT FLASK_APP=/opt/app.py flask run --host=0.0.0.0
+
+Run:docker build . to create an image 
+
+
+Directive	Purpose
+FROM ubuntu:17.04	Sets the base image — Ubuntu 17.04.
+RUN apt-get update && apt-get install -y python python-pip	Updates package lists and installs Python 2 and pip.
+RUN pip install flask	Installs the Flask web framework.
+COPY app.py /opt/	Copies your application file into the container’s /opt directory.
+ENTRYPOINT FLASK_APP=/opt/app.py flask run --host=0.0.0.0	Defines the command that runs when the container starts — launches the Flask app accessible from any network interface.
+
+or:
+
+ENTRYPOINT FLASK_APP=/opt/app.py FLASK_RUN_PORT=8080 FLASK_ENV=development flask run --host=0.0.0.0
+
+or:
+
+ENV FLASK_APP=/opt/app.py
+ENV FLASK_RUN_HOST=0.0.0.0
+ENV FLASK_RUN_PORT=8080
+
+ENTRYPOINT ["flask", "run"]
+
+
+Now we can inspect: du -sh * inside the directory /var/lib/docker/aufs/diff.
+
+
+Part	Meaning
+du	Disk Usage — shows how much space files/directories use.
+-s	Summarize — shows only the total size per item, not recursive details.
+-h	Human‑readable — converts bytes into KB, MB, etc.
+*	Wildcard — applies the command to all items in the current directory.
+
+16K  23d6e144c661f8c74be182e0cbed82571a6dab8bd8c08bc847809aa0211c0b9a
+20K  9a4479c548974810b3a8e1971db05481cb56c72c28e29926937afc9f02f8936d
+
+represents a layer in Docker’s AUFS storage driver.
+
+Every image and container is built from multiple layers.
+
+AUFS stores each layer as a directory named by its SHA256 hash.
+
+Inside each layer folder are the filesystem changes (added/modified files).
+
+So those hashes correspond to specific image or container layers.
+
+
+And if we open one of these files there will be our app.py code and file which we used to create an IMAGE
+
+
+
+>docker system df - will show the size cinsumed by iages,containers,local volumes
+
+
+>docker system df - v  - will show image and size consumed by this image.Shared will show the size when image use the cache from anothe image and Uniq size exactly the size uniq per image
+
+///////////////////////////LAB ///////////////////
+
+What location are the files related to the docker containers and images stored?
+
+/var/lib/docker
+
+What directory under /var/lib/docker are the files related to the container alpine-3 image stored?
+
+NOt related: docker info | grep Storage
+
+Once you have the container ID, navigate to /var/lib/docker/containers/ and look for the directory with that name.
+
+steps get container ID:
+
+lib/docker/overlay2 ➜  docker ps -a
+CONTAINER ID   IMAGE     COMMAND     CREATED          STATUS                      PORTS     NAMES
+25b6e6636e73   alpine    "/bin/sh"   13 minutes ago   Exited (0) 13 minutes ago             alpine-3
+8ab076f08f75   alpine    "/bin/sh"   13 minutes ago   Exited (0) 13 minutes ago             alpine-2
+ef67d0351e01   alpine    "/bin/sh"   13 minutes ago   Exited (0) 13 minutes ago             alpine-1
+
+
+lib/docker/containers ➜  ls                                                                                                
+25b6e6636e73e47c7135081cfa6d4db8efa760d97991aafa15387121d4135bbd
+8ab076f08f750b66310cc23b6cd21c7521254cfca58d22594786cd1dcd3fdb60
+ef67d0351e0176b25c6c080ee583d3a124785dd1b52c3e1cc69786ba625a1049
+
+lib/docker/containers ➜  cd 25b6e6636e73e47c7135081cfa6d4db8efa760d97991aafa15387121d4135bbd 
+
+docker/containers/25b6e6636e73e47c7135081cfa6d4db8efa760d97991aafa15387121d4135bbd ➜  ls
+25b6e6636e73e47c7135081cfa6d4db8efa760d97991aafa15387121d4135bbd-json.log
+checkpoints
+config.v2.json
+hostconfig.json
+hostname
+hosts
+mounts
+resolv.conf
+resolv.conf.hash
+
+So answer is: 25b6e6636e73e47c7135081cfa6d4db8efa760d97991aafa15387121d4135bbd
+
+Run a mysql container named mysql-db using the mysql image. Set database password to db_pass123
+
+
+Note: Remember to run it in the detached mode.
+
+
