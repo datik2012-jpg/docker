@@ -194,9 +194,210 @@ resolv.conf.hash
 
 So answer is: 25b6e6636e73e47c7135081cfa6d4db8efa760d97991aafa15387121d4135bbd
 
+or another simple option:
+
+~ ➜  docker ps -a
+CONTAINER ID   IMAGE     COMMAND     CREATED          STATUS                      PORTS     NAMES
+e147eef9edba   alpine    "/bin/sh"   35 seconds ago   Exited (0) 34 seconds ago             alpine-3
+442f2616ff1f   alpine    "/bin/sh"   35 seconds ago   Exited (0) 35 seconds ago             alpine-2
+34deb9c27ed0   alpine    "/bin/sh"   36 seconds ago   Exited (0) 36 seconds ago             alpine-1
+
+and now we see docker container id
+
+now check in /var/lib/docker/containers:
+
+var/lib/docker ➜  ls
+buildkit    containerd  containers  engine-id   image       network     overlay2    plugins     runtimes    swarm       tmp         volumes
+
+/var/lib/docker ➜  cat containers    
+cat: read error: Is a directory
+
+/var/lib/docker ✖ cd containers     
+
+lib/docker/containers ➜  ls
+34deb9c27ed0031817127394dabeb1d3e941648eb8166ca0301198466c3bbea9  e147eef9edba5201ce61466ec2b0713feeb00a5d039ab8aaed3d38ecbbc19775
+
+
 Run a mysql container named mysql-db using the mysql image. Set database password to db_pass123
 
 
 Note: Remember to run it in the detached mode.
+
+
+lib/docker/containers ✖ docker pull mysql
+Using default tag: latest
+latest: Pulling from library/mysql
+1dced004aaec: Pull complete 
+69edacfaea72: Pull complete 
+8e3f19ed5e67: Pull complete 
+f74943462a4f: Pull complete 
+8ec50bfa3b7e: Pull complete 
+35300b480a58: Pull complete 
+5491a2a13e1b: Pull complete 
+e80b372994e5: Pull complete 
+4f23ccd26206: Pull complete 
+802b6dd0c6bd: Pull complete 
+Digest: sha256:c11782aa2a96624c1efc121768641d96954faa136d6aa82751b032d8c426ffbc
+Status: Downloaded newer image for mysql:latest
+docker.io/library/mysql:latest
+
+lib/docker/containers ✖ docker run -d \
+  --name mysql-db \
+  -e MYSQL_ROOT_PASSWORD=db_pass123 \
+  mysql
+ad0a53de7ad779c6a5b56683f45c8b0ed90bfd8a7c6ad4e631f8aa98cd48e5e8
+
+
+We have just written some data into the database. To view the information we wrote, run the get-data.sh script available in the /root directory. How many customers data have been written to the database?
+
+Command: sh get-data.sh
+>bash get-data.sh  (run it from cd /root)
+
+Run a mysql container again, but this time map a volume to the container so that the data stored by the container is stored at /opt/data on the host.
+
+
+Use the same name : mysql-db and same password: db_pass123 as before. Mysql stores data at /var/lib/mysql inside the container.
+
+docker run -d \
+  --name mysql-db \
+  -e MYSQL_ROOT_PASSWORD=db_pass123 \
+  -v /opt/data:/var/lib/mysql \
+  mysql
+
+~ ➜  docker ps        
+CONTAINER ID   IMAGE     COMMAND                  CREATED         STATUS         PORTS                 NAMES
+5897d1576f7d   mysql     "docker-entrypoint.s…"   8 seconds ago   Up 7 seconds   3306/tcp, 33060/tcp   mysql-db
+
+run the script which fetch the data from the db:
+
+~ ✖ bash get-data.sh
+mysql: [Warning] Using a password on the command line interface can be insecure.
+id      Name    Phone   Email
+1       Kareem  130-5655        Duis.volutpat.nunc@quamCurabitur.org
+2       Ruby    1-584-149-0770  Nulla.tempor@vitaeorciPhasellus.org
+3       Rowan   199-8663        consectetuer.adipiscing.elit@Sedmalesuada.co.uk
+4       Alisa   220-6017        elementum.sem.vitae@enimMauris.edu
+5       Ella    731-0337        fermentum@nec.net
+6       Tiger   658-4480        quis.diam@odiovelest.net
+7       Felix   1-274-848-3378  Mauris.vel@arcu.com
+8       Karina  1-390-796-3451  sagittis.semper@odioapurus.co.uk
+9       Davis   605-8539        venenatis.vel@risusDonecnibh.com
+10      Mohammad        1-590-174-1489  ornare.sagittis.felis@natoque.ca
+11      Zane    362-1770        Aenean.euismod@condimentum.co.uk
+12      Piper   1-231-386-6903  nunc.sed.pede@nascetur.ca
+13      Marshall        1-383-729-4990  Cras.interdum.Nunc@neceuismod.ca
+14      Zena    241-6641        Fusce.mollis.Duis@lobortis.org
+15      Abdul   1-748-387-9935  eget.lacus.Mauris@Crasvehicula.com
+16      Chase   1-401-241-9169  ante.dictum.mi@nascetur.org
+17      Zahir   921-0663        non@nonummyutmolestie.edu
+18      Brenda  1-691-909-5827  Quisque.ac@magnaCras.co.uk
+19      Laura   1-562-983-9565  Quisque.ornare.tortor@sollicitudinadipiscing.ca
+20      Madison 1-348-737-0587  Quisque.varius@Intinciduntcongue.org
+21      Tanek   991-6278        dignissim.magna@Pellentesqueutipsum.net
+22      Dakota  893-0792        Nullam.enim.Sed@nulla.net
+23      Boris   1-297-302-5792  non.sollicitudin@eleifendegestasSed.co.uk
+24      Celeste 723-6729        mauris.rhoncus@eunulla.edu
+25      Connor  1-203-901-7531  et@loremipsumsodales.edu
+26      Perry   1-756-607-9187  eros.turpis@tristiquepharetra.co.uk
+27      Hayfa   1-609-407-3019  non.lobortis.quis@malesuadafringilla.net
+28      Todd    343-0454        id.erat@arcu.org
+29      Fuller  881-7273        non.feugiat.nec@adipiscingelit.net
+30      Rama    1-927-605-0610  nonummy.ultricies.ornare@malesuada.co.uk
+
+Inside the script:
+
+~ ✖ cat get-data.sh 
+docker exec mysql-db mysql -pdb_pass123 -e 'use foo; select * from myTable'
+
+Better and clear:
+
+docker exec mysql-db \
+  mysql -pdb_pass123 foo \
+  -e "SELECT * FROM myTable;"
+
+Option A — safest (password prompt) + manually write db_pass123
+
+~ ➜  docker exec -it mysql-db mysql -u root -p
+
+Enter password: 
+Welcome to the MySQL monitor.  Commands end with ; or \g.
+Your MySQL connection id is 20
+Server version: 9.7.0 MySQL Community Server - GPL
+
+Copyright (c) 2000, 2026, Oracle and/or its affiliates.
+
+Oracle is a registered trademark of Oracle Corporation and/or its
+affiliates. Other names may be trademarks of their respective
+owners.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+mysql> ^C
+mysql> USE foo;
+Reading table information for completion of table and column names
+You can turn off this feature to get a quicker startup with -A
+
+Database changed
+
+Show all databases:
+
+mysql> SHOW DATABASES;
++--------------------+
+| Database           |
++--------------------+
+| foo                |
+| information_schema |
+| mysql              |
+| performance_schema |
+| sys                |
++--------------------+
+5 rows in set (0.001 sec)
+
+mysql> CREATE TABLE test (
+    ->   id INT PRIMARY KEY,
+    ->   name VARCHAR(50)
+    -> );
+Query OK, 0 rows affected (0.003 sec)
+
+mysql> SHOW DATABASES;
++--------------------+
+| Database           |
++--------------------+
+| foo                |
+| information_schema |
+| mysql              |
+| performance_schema |
+| sys                |
++--------------------+
+5 rows in set (0.001 sec)
+
+mysql> INSERT INTO test VALUES (1, 'Dani');
+Query OK, 1 row affected (0.001 sec)
+
+
+mysql> SELECT * FROM test;
++----+------+
+| id | name |
++----+------+
+|  1 | Dani |
++----+------+
+1 row in set (0.000 sec)
+
+mysql> EXIT;
+Bye
+
+Example sessions:
+
+mysql> SHOW DATABASES;
+mysql> USE foo;
+mysql> SHOW TABLES;
+mysql> SELECT * FROM myTable;
+mysql> EXIT;
+
+
+Disaster strikes.. again! And the database crashed again. But this time we have the data stored at /opt/data directory. Re-deploy a new mysql instance using the same options as before.
+
+
+Just run the same command as before. Here it is for your convenience: docker run -v /opt/data:/var/lib/mysql -d --name mysql-db -e MYSQL_ROOT_PASSWORD=db_pass123 mysql
 
 
