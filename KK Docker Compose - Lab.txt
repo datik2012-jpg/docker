@@ -1,0 +1,261 @@
+//////////////Docker Compose Advanced Lab //////////
+
+
+First, create a Docker network named clicknet. This should be a bridge network.
+
+root@docker-host ~ ➜  docker network create clicknet
+82039fcbadfaf6dc0d32138f2b5f6356ef431cb8b0fcc19c136c55adbabfb40f
+
+Validation:
+
+root@docker-host ~ ➜  docker network ls
+NETWORK ID     NAME       DRIVER    SCOPE
+b2baf752b2b9   bridge     bridge    local
+82039fcbadfa   clicknet   bridge    local
+238b23f4e2a9   host       host      local
+59b9cbf97489   none       null      local
+
+
+Create a redis database container named redis using the image redis:alpine, running in the background.
+
+Attach it to the clicknet Docker network that you created in the previous task.
+
+root@docker-host ~ ✖ docker run -d --name redis --network clicknet redis:alpine
+Unable to find image 'redis:alpine' locally
+alpine: Pulling from library/redis
+537bc096dad5: Pull complete 
+b1f21fb9c363: Pull complete 
+4f4fb700ef54: Pull complete 
+259fe4442447: Pull complete 
+9b7c44b6f30a: Pull complete 
+21ee05ca5806: Pull complete 
+710e2faa951e: Download complete 
+7c7d412e5672: Download complete 
+Digest: sha256:09160599abd229764c0fb44cb6be640294e1d360a54b19985ab4843dcf2d90f1
+Status: Downloaded newer image for redis:alpine
+
+6ce95ef8025bdc13e8ec22c4b7a6073c6477fba6cb170bc23daaabf9cf0906aa
+
+root@docker-host ~ ✖ docker ps
+CONTAINER ID   IMAGE          COMMAND                  CREATED         STATUS         PORTS      NAMES
+6ce95ef8025b   redis:alpine   "docker-entrypoint.s…"   8 minutes ago   Up 8 minutes   6379/tcp   redis
+
+
+Next, create a simple container named clickcounter using the image kodekloud/click-counter, attach it to the clickcounter network from the earlier task, and then expose it on host port 8085.
+
+
+The clickcounter app runs on port 5000.
+
+Question 3: 
+Typo clickcounter network -> clicknet
+
+root@docker-host ~ ✖ docker run -d --name clickcounter --network clicknet -p 8085:5000 kodekloud/click-counter
+Unable to find image 'kodekloud/click-counter:latest' locally
+latest: Pulling from kodekloud/click-counter
+452c68a16ccd: Pull complete 
+767433e10bb0: Pull complete 
+540db60ca938: Pull complete 
+156f0b0493cb: Pull complete 
+a7ad1a75a999: Pull complete 
+3fe82d8a2401: Pull complete 
+37ce6546d5dd: Pull complete 
+4a41f7c94204: Pull complete 
+ec9e91bed5a2: Pull complete 
+473063430a4f: Pull complete 
+Digest: sha256:530e4532a718e8f5cbda05844a6c0638ebe8898fa4c4307ee6afbdd5d1f213db
+Status: Downloaded newer image for kodekloud/click-counter:latest
+
+f54cb09846e79464b9ea6cb62d1e19cbe63de8a260c46debfa46b92955a477d3
+
+root@docker-host ~ ✖ docker ps
+CONTAINER ID   IMAGE                     COMMAND                  CREATED          STATUS          PORTS                                         NAMES
+f54cb09846e7   kodekloud/click-counter   "flask run"              26 seconds ago   Up 25 seconds   0.0.0.0:8085->5000/tcp, [::]:8085->5000/tcp   clickcounter
+6ce95ef8025b   redis:alpine              "docker-entrypoint.s…"   11 minutes ago   Up 11 minutes   6379/tcp                                      redis
+
+Let's clean up the resources created in the previous steps.
+
+Delete the redis and clickcounter containers, alongwith the clicknet network you had created.
+
+root@docker-host ~ ✖ docker stop f54cbo09 6ce95ef80
+6ce95ef80
+f54cb09
+
+root@docker-host ~ ➜  docker rm f54cb09
+f54cb09
+
+root@docker-host ~ ➜  docker rm 6ce95ef80
+6ce95ef80
+
+
+root@docker-host ~ ✖ docker network ls
+NETWORK ID     NAME       DRIVER    SCOPE
+b2baf752b2b9   bridge     bridge    local
+82039fcbadfa   clicknet   bridge    local
+238b23f4e2a9   host       host      local
+59b9cbf97489   none       null      local
+
+root@docker-host ~ ✖ docker network rm 82039f
+82039f
+
+
+Create a compose.yaml file in the /root/clickcounter directory. Once done, bring up the stack using Docker Compose.
+
+The compose file should have the following exact specification:
+
+redis service - Use redis:alpine image name
+clickcounter service - Use the kodekloud/click-counter image name; the app runs on port 5000 and should be exposed on host port 8085.
+
+
+
+root@docker-host ~/clickcounter ➜  vim compose.yaml
+
+
+compose.yaml:
+services:
+  
+  redis:
+    image: redis:alpine
+
+  clickcounter:
+    image: kodekloud/click-counter
+    ports:
+      - "8085:5000"
+
+
+Save and run:
+
+root@docker-host ~/clickcounter ✖ docker compose up -d
+[+] up 3/3
+ ✔ Network clickcounter_default          Created                                                                                                     0.1s
+ ✔ Container clickcounter-redis-1        Started                                                                                                     0.7s
+ ✔ Container clickcounter-clickcounter-1 Started                                                                                                     0.7s
+
+Instead of manually creating networks and running several docker run commands, Compose automatically created the required network, connected the containers together, and started them in the correct order with a single command docker compose up.
+
+This makes multi-container applications easier to manage, reproduce, scale, and share across different environments.
+
+
+root@docker-host ~/clickcounter ✖ docker network ls
+NETWORK ID     NAME                   DRIVER    SCOPE
+b2baf752b2b9   bridge                 bridge    local
+023b58b1d8e6   clickcounter_default   bridge    local
+238b23f4e2a9   host                   host      local
+59b9cbf97489   none                   null      local
+
+
+///////////////////////////////////////////////////////////////
+
+
+///////////////////////////Docker Swarm in Depth ///////////
+
+docker-swarm-local-setup.md
+markdown
+# 🐳 Local Docker Swarm: Manager + Worker Nodes  
+A complete guide for running a multi‑node Docker Swarm cluster locally on one machine using Docker‑in‑Docker (DinD).
+
+---
+
+## 📌 Overview  
+This setup simulates a real Swarm cluster:
+
+- 1 Manager node  
+- Multiple Worker nodes  
+- All running locally using Docker containers  
+- No VMs required  
+- Perfect for learning, testing, and development  
+
+---
+
+## 🚀 Step 1 — Initialize the Swarm (Manager Node)
+
+Create the Swarm manager on your host machine:
+
+```bash
+docker swarm init
+This outputs a join command similar to:
+
+Code
+docker swarm join --token SWMTKN-1-xxxx manager-ip:2377
+Save this token — workers will use it.
+
+🛠️ Step 2 — Create Worker Nodes (Docker‑in‑Docker)
+Run Docker‑in‑Docker containers to simulate worker machines:
+
+bash
+docker run -d --privileged --name worker1 docker:dind
+docker run -d --privileged --name worker2 docker:dind
+Each container is now a separate Docker engine.
+
+🔗 Step 3 — Join Workers to the Swarm
+Enter worker1:
+bash
+docker exec -it worker1 sh
+Inside worker1, run:
+
+bash
+docker swarm join --token <token> <manager-ip>:2377
+Repeat for worker2:
+bash
+docker exec -it worker2 sh
+docker swarm join --token <token> <manager-ip>:2377
+📋 Step 4 — Verify the Cluster
+Back on the manager node (your host):
+
+bash
+docker node ls
+Expected output:
+
+Code
+ID        HOSTNAME   STATUS   AVAILABILITY   MANAGER STATUS
+xxxx      manager    Ready    Active         Leader
+xxxx      worker1    Ready    Active
+xxxx      worker2    Ready    Active
+You now have a functioning multi‑node Swarm cluster.
+
+📦 Step 5 — Deploy a Stack (Optional)
+Create a stack.yml:
+
+yaml
+version: "3.9"
+
+services:
+  web:
+    image: nginx
+    ports:
+      - "8080:80"
+    deploy:
+      replicas: 3
+      placement:
+        constraints:
+          - node.role == worker
+Deploy it:
+
+bash
+docker stack deploy -c stack.yml mystack
+Check services:
+
+bash
+docker service ls
+🧹 Step 6 — Clean Up
+Remove the stack:
+
+bash
+docker stack rm mystack
+Leave the swarm:
+
+bash
+docker swarm leave --force
+Stop worker nodes:
+
+bash
+docker rm -f worker1 worker2
+📝 Notes & Best Practices
+Use Docker‑in‑Docker for local clusters — fast and lightweight
+
+Workers must run in --privileged mode
+
+Use docker exec to access worker nodes
+
+Use docker node ls to monitor cluster health
+
+Use placement constraints to control where services run

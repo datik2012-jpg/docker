@@ -35,4 +35,4 @@ and  Docker links are deprecated.So do not use: docker run -d --name vote --link
 
 
 
-
+Github docker voting app: https://github.com/dockersamples/example-voting-app
