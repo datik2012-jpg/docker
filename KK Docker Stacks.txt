@@ -1,0 +1,122 @@
+////////////////Docker Stacks //////////
+
+Free online : labs.play-with-docker.com  - for 3 hours ,playground where you can play with docker!! - is depricated
+
+Free Docker online:
+https://labex.io/tutorials/docker-online-docker-playground-372912
+
+and here the labs to learn Devops: https://labex.io/learn/devops
+
+
+
+
+//////////////////////Docker Registry in Docker ////////
+
+Steps to run docker local registry: https://hub.docker.com/_/registry
+
+labex@ubuntu:~$ docker run -d -p 5000:5000 --restart always --name registry registry:3
+Unable to find image 'registry:3' locally
+3: Pulling from library/registry
+6a0ac1617861: Pull complete 
+d5a24b5445d2: Pull complete 
+d1ddd084e87d: Pull complete 
+2c362d1d33f0: Pull complete 
+42b9845e5d5c: Pull complete 
+Digest: sha256:85347ed2ecde64161c7a4788a4d7d3dcc9d6f86f7be95834022e3c6a423a945a
+Status: Downloaded newer image for registry:3
+e0108e61329542658b3498c63f1a2e895963ba79af9fe8c7d5434bc456eccd46
+
+Pull some image and try later to push to that local registry:
+
+
+labex@ubuntu:~$ docker pull nginx
+Using default tag: latest
+latest: Pulling from library/nginx
+72c03230f136: Pull complete 
+d4dcde3aeeed: Pull complete 
+c5a7565de4cf: Pull complete 
+57b3fbf43092: Pull complete 
+80fa08b690ad: Pull complete 
+41c9f6f90940: Pull complete 
+6376488be516: Pull complete 
+Digest: sha256:608a100c71651bf5b773c89083b4a1ad7ef4b2bd05d7a7e552271e03123692ad
+Status: Downloaded newer image for nginx:latest
+docker.io/library/nginx:latest
+labex@ubuntu:~$ docker images ls
+REPOSITORY   TAG       IMAGE ID   CREATED   SIZE
+
+No images found matching "ls": did you mean "docker image ls"?
+labex@ubuntu:~$ docker image ls 
+REPOSITORY    TAG       IMAGE ID       CREATED        SIZE
+nginx         latest    936fef290c8f   3 days ago     161MB
+registry      3         53c26cd62311   5 weeks ago    62.4MB
+hello-world   latest    e2ac70e7319a   2 months ago   10.1kB
+
+Tag new image (registry is working on a port 5000)
+Tag the image and it will be added to docker images:
+
+docker tag nginx localhost:5000/nginx
+labex@ubuntu:~$ docker tag nginx localhost:5000/nginx
+
+labex@ubuntu:~$ docker images
+REPOSITORY             TAG       IMAGE ID       CREATED        SIZE
+nginx                  latest    936fef290c8f   3 days ago     161MB
+localhost:5000/nginx   latest    936fef290c8f   3 days ago     161MB
+registry               3         53c26cd62311   5 weeks ago    62.4MB
+hello-world            latest    e2ac70e7319a   2 months ago   10.1kB
+
+
+
+
+Push to local docker registry:
+$ docker push localhost:5000/nginx
+
+
+labex@ubuntu:~$ docker push localhost:5000/nginx
+Using default tag: latest
+The push refers to repository [localhost:5000/nginx]
+121b6a4dad00: Pushed 
+db054fb45c4c: Pushed 
+57b80f15e540: Pushed 
+e8832fb2fc12: Pushed 
+493aa43406a6: Pushed 
+af29206eb654: Pushed 
+f4f8b983b714: Pushed 
+latest: digest: sha256:c257e8b61d5e8c029e8e261f9ab97366df0d7c2fb9ad964d11e573f7b6431ce4 size: 1778
+
+Connect to registry container to check the things - in case we want to see images where they been stored:
+
+>docker exec -it registry /bin/sh  - connect to docker registry shell 
+
+We have found the IMAGE in the DOCKER REGISTRY   (the full path is: /var/lib/registry/docker/registry/v2/repositories) !!!!
+
+labex@ubuntu:~$ docker exec -it registry /bin/sh
+/ # cd /var/lib/registry
+/var/lib/registry # ls
+docker
+/var/lib/registry # cd docker
+/var/lib/registry/docker # ls
+registry
+/var/lib/registry/docker # cd registry
+/var/lib/registry/docker/registry # ls
+v2
+/var/lib/registry/docker/registry # cd v2
+/var/lib/registry/docker/registry/v2 # ls
+blobs         repositories
+/var/lib/registry/docker/registry/v2 # cd repositories/
+/var/lib/registry/docker/registry/v2/repositories # ls
+nginx
+
+Exit from docker registry shell:
+>exit 
+
+
+Pull from Docker Regitry shell:
+>docker pull localhost:5000/nginx
+
+
+
+
+
+
+
