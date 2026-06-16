@@ -1,0 +1,297 @@
+kubectl get nodes   - to see all nodes in deployemnt
+
+kudectl het pods    - to see all pods (abstract groups of containers)
+
+kubectl get services - to see all networks 
+
+Steps are:
+Create pods yamls
+Create services yamls
+Create loadbalancer yaml
+
+in the end we will have 5 pods and 3 services !!!
+
+basic yaml file for k8s should have:
+
+apiVersion:
+kind:
+metadata:
+spec:
+
+Example: voting-app-pod.yml   - which is web app which has two votes buttons
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: voting-app-pod
+  labels:
+    name: voting-app-pod
+    app: first-voting-app
+spec:
+  containers:
+  - name: voting-app
+    image: dockersamples/examplevotingapp_vote
+    ports:
+    - containerPort: 80
+
+Example: worker-app-pod.yml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: worker-app-pod
+  labels:
+    name: worker-app-pod
+    app: first-voting-app
+spec:
+  containers:
+  - name: worker-app
+    image: dockersamples/examplevotingapp_worker
+
+Result pod:result-app-pod.yml   - webpage to show results of votes
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: result-app-pod
+  labels:
+    name: result-app-pod
+    app: first-voting-app
+spec:
+  containers:
+  - name: result-app
+    image: dockersamples/examplevotingapp_result
+    ports:
+    - containerPort: 80
+
+
+Redis pod:redis-pod.yml   - redis pod
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: redis-pod
+  labels:
+    name: redis-pod
+    app: first-voting-app
+spec:
+  containers:
+  - name: redis
+    image: redis/latest
+    ports:
+    - containerPort: 6379      - default redis port
+
+
+Postgress pod: postgres.yml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: postgres-pod
+  labels:
+    name: postgres-pod
+    app: first-voting-app
+spec:
+  containers:
+  - name: postgres
+    image: postgres:9.4
+    ports:
+    - containerPort: 5432
+
+Result pod:result-app-pod.yml   - webpage to show results of votes
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: results-pod
+  labels:
+    name: results-pod
+    app: first-voting-app
+spec:
+  containers:
+  - name: results
+    image: results/latest
+    ports:
+    - containerPort: 80
+
+Now network part ,lets create services:
+
+redis-service.yaml
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  labels:
+    name: redis-service
+    app: first-voting-app
+spec:
+  ports:
+  - port: 6379
+    targetPort: 6379
+  selector:
+    name: redis-pod            - this part is copied from redis yaml !!!!!!
+    app: first-voting-app      - this part is copied from redis yaml !!!!!!
+
+
+
+Postgres service yaml
+postgres-service.yml
+
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: db      - should be names as application is looking for
+  labels:
+    name: db-service
+    app: first-voting-app
+spec:
+  ports:
+  - port: 5432
+    targetPort: 5432
+  selector:
+    name: postgres-pod               - this part is copied from redis yaml !!!!!!
+    app: first-voting-app            - this part is copied from redis yaml !!!!!!
+          
+
+    
+Load balancer , it will monitor votign app - so we can look voting web yaml and configure loadbalancer yml base on this:
+
+
+voting-app-service.yml   - will be the name of the yaml for loadbalancer
+
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: voting-service
+  labels:
+    name: voting-service
+    app: first-voting-app
+spec:
+  type: LoadBalancer  - need this type cause we want this service be accessible outside 
+  ports:
+  - port: 80
+    targetPort: 80
+  selector:
+    name: voting-app-pod    - taken from voting app pod
+    app: first-voting-app
+
+
+LoadBalancer for results app as well we need:
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: result-service
+  labels:
+    name: result-service
+    app: first-voting-app
+spec:
+  type: LoadBalancer  - need this type cause we want this service be accessible outside 
+  ports:
+  - port: 80
+    targetPort: 80
+  selector: 
+    name: results-pod          - taken from results yml
+    app: first-voting-app      - taken from results yml
+
+
+Will start to deploy from voting app pod (web page part):
+
+>kubectl create -f voting-app-pod.yml
+Output: pod voting-app-pod.yml been created
+
+Validate it running:
+
+>kubectl get pods
+
+Now lets deploy LoadBalancer for voting app web page:
+
+>kubectl create -f voting-app-service.yml
+Output: created !!
+
+Validate services:
+>kubectl get services
+Output: Creating (need wait few minutes)
+
+Now we can deploy Redis pod:
+kubectl create -f redis-pod.yml
+Output: Created
+
+Validation:
+>kubectl get pods
+Output:Running
+
+Now run Internal redis service:
+
+kubectl create -f redis-service.yaml 
+Output:Created
+
+Validation internal redis service is running:
+kubectl get services
+Output: ClusterIP - is running
+
+Create posgres pod:
+
+kubectl create -f postgres.yml
+
+
+Create a service for DB(postgres):
+>kubectl create -f postgres-service.yml
+
+Create worker pod:
+>kubectl create -f worker-app-pod.yaml
+
+
+Result pod:
+kubectl create -f result-app-pod.yaml
+
+and Result App Service(load balancer)
+
+kubectl create -f result-app-service.yaml
+
+
+////////////////////Demo ///////////
+
+
+https://labs.play-with-k8s.com/   - is deprecated 
+
+Init cluster master node:
+kubeadm init --apiserver-advertise-address $(hostname -a)
+
+Initialize Cluster Networking
+Apply the Weave Net CNI plugin to your Kubernetes cluster:
+
+kubectl apply -n kube-system -f \
+"https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"
+
+
+(Optional) Deploy Kubernetes Dashboard
+curl -L -s https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml \
+| sed 's/targetPort: 8443/targetPort: 8443\n  type: LoadBalancer/' \
+| kubectl apply -f -
+
+
+
+Install git
+
+Git clore our repo with the project
+
+
+Now run the same kubectl create commands like we do before !!!! to deploy the app on this cloud provider
+
+When Master node is as well worker node to deploy will throw an error so to make able to run on master worker node jobs need to run:
+
+kubectl taint nodes <nodeName> node-role.kubernetes.io/master:NoSchedule-
+
+
+/////////////////////////Another option to Deploy  all the files with one command //////
+
+
+>kubectl create -f .    - will deploy all yml
+
+
+>kube delete -f .    - reads each file and delete pods and services EXCEPT default k8s service (network)
+
+
